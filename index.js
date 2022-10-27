@@ -161,7 +161,7 @@ const intervalFunction = (sheet, browser, page) => async () => {
   const data = await getData();
   const { percentVoteCount } = data;
 
-  if (globalPercentVoteCount < percentVoteCount) {
+  if (globalPercentVoteCount !== percentVoteCount) {
     console.log('\natualizando tabela');
     globalPercentVoteCount = percentVoteCount;
     const formattedData = formatObject(data);
@@ -204,7 +204,7 @@ const main = async () => {
       twitterClient.v1.sendDm({ recipient_id: 2224444156, text: `Estou vivo às ${new Date()}` });
     }, 1000 * 60 * 5);
 
-    await intervalFunction(sheet, browser, page);
+    await intervalFunction(sheet, browser, page)();
 
     await protectInterval(intervalFunction(sheet, browser, page), DEFAULT_INTERVAL_TIME);
   } catch (e) {
