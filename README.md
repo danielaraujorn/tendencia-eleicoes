@@ -20,3 +20,5 @@ O programa tem as seguintes funcionalidades
 1. Faz uma postagem no twitter [@TenEleicao](https://twitter.com/TenEleicao).
 1. Caso dê algo errado, ele me manda uma dm para avisar que o programa morreu
 1. Caso a verificação de dar errado der errado, o servidor me manda uma dm a cada 5 minutos para a minha conta no twitter para avisar que o programa continua rodando
+
+<!-- forever -m 100 -c ts-node src/index.ts -->
