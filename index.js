@@ -210,7 +210,7 @@ const main = async () => {
   } catch (e) {
     await twitterClient.v1.sendDm({
       recipient_id: process.env.LIFE_SIGNAL_RECIPIENT_ID,
-      text: 'DEU RUIM!!!!',
+      text: `DEU RUIM EM ${new Date()}!!!!`,
     });
     throw new Error();
   }
