@@ -1,0 +1,5 @@
+sheets_credentials*
+sheet_data*
+twitter_credentials*
+node_modules*
+.env
