@@ -102,6 +102,18 @@ export function RacePanel({
                 </li>
               );
             })}
+            {!rosterOnly && !view.zeroed
+              ? view.others.map((candidate) => (
+                  <li key={candidate.id} className="other">
+                    <CandidateName
+                      number={candidate.number}
+                      name={candidate.name}
+                      party={candidate.party}
+                    />
+                    <span className="numbers">{formatPercent(candidate.percent)}</span>
+                  </li>
+                ))
+              : null}
           </ul>
           {!rosterOnly && !view.zeroed && view.trends.length > 0 ? (
             <p className="note">

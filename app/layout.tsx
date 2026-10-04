@@ -16,7 +16,7 @@ const sans = Source_Sans_3({
 export const metadata: Metadata = {
   title: "Tendência da apuração 2026",
   description:
-    "Acompanhamento da apuração para presidente, governador e os mais votados a senador e deputado em RN, SP e RJ.",
+    "Acompanhamento da apuração para presidente, governador e os mais votados a senador e deputado em cada estado.",
 };
 
 export default function RootLayout({

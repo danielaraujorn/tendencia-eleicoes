@@ -6,7 +6,9 @@ import { RankingPanel } from "@/components/ranking-panel";
 import {
   LIST_OFFICES,
   PRESIDENT_ID,
+  STATE_COOKIE,
   STATE_OPTIONS,
+  isStateId,
   stateRaceId,
   type StateId,
 } from "@/lib/labels";
@@ -18,12 +20,12 @@ function waitingCopy(source: ApuracaoResponse["source"] | null) {
   return "Aguardando o TSE. A divulgação começa às 17h, horário de Brasília.";
 }
 
-export function Dashboard() {
+export function Dashboard({ initialState }: { initialState: StateId }) {
   const [data, setData] = useState<ApuracaoResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
   const [phase, setPhase] = useState<PollPhase>("before");
-  const [stateId, setStateId] = useState<StateId>("rn");
+  const [stateId, setStateId] = useState<StateId>(initialState);
 
   useEffect(() => {
     let active = true;
@@ -99,7 +101,12 @@ export function Dashboard() {
             id="estado"
             className="scope-select"
             value={stateId}
-            onChange={(event) => setStateId(event.target.value as StateId)}
+            onChange={(event) => {
+              const next = event.target.value;
+              if (!isStateId(next)) return;
+              document.cookie = `${STATE_COOKIE}=${next}; path=/; samesite=lax`;
+              setStateId(next);
+            }}
           >
             {STATE_OPTIONS.map((option) => (
               <option key={option.id} value={option.id}>

@@ -14,9 +14,9 @@ export type StoredState = StoredPoint & {
   sourceUpdatedAt: string | null;
 };
 
-const TOP = 4;
+const CHART_SIZE = 3;
 const ZEROED_LIST = 10;
-export const LIST_SIZE = 10;
+export const LIST_SIZE = 20;
 
 export function isZeroed(candidates: Candidate[]) {
   return (
@@ -31,7 +31,7 @@ function validVoteTotal(candidates: Candidate[]) {
   return pool.reduce((sum, candidate) => sum + candidate.votes, 0);
 }
 
-export function topCandidates(candidates: Candidate[], count = TOP) {
+export function topCandidates(candidates: Candidate[], count = CHART_SIZE) {
   return [...candidates]
     .sort((a, b) => b.percent - a.percent || a.seq - b.seq)
     .slice(0, count);
@@ -81,6 +81,7 @@ function listRaceView(
     gap: leader && runnerUp ? leader.percent - runnerUp.percent : null,
     zeroed,
     top,
+    others: [],
     roster: [],
     points: [],
     trends: [],
@@ -107,9 +108,11 @@ export function buildRaceView(
   if (config.kind === "list") {
     return listRaceView(config, current, latest, zeroed);
   }
-  const top = current
-    ? topCandidates(current.candidates, zeroed ? ZEROED_LIST : TOP)
+  const ranked = current
+    ? topCandidates(current.candidates, current.candidates.length)
     : [];
+  const top = zeroed ? ranked.slice(0, ZEROED_LIST) : ranked.slice(0, CHART_SIZE);
+  const others = zeroed ? [] : ranked.slice(CHART_SIZE);
   const roster = current ? rosterCandidates(current.candidates) : [];
   const series = chartPoints(history, latest);
   const totals = series.map((point) => ({
@@ -165,6 +168,7 @@ export function buildRaceView(
     gap: leader && runnerUp ? leader.percent - runnerUp.percent : null,
     zeroed,
     top,
+    others,
     roster,
     points: points.map((point) => ({
       pst: point.pst,

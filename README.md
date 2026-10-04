@@ -1,6 +1,6 @@
 # Tendência da apuração 2026
 
-Página que acompanha o 1º turno: presidente do Brasil, governador de RN, SP e RJ, e os dez mais votados a senador, deputado federal e deputado estadual do estado escolhido. O gráfico de presidente e governador mostra o percentual conforme a apuração das seções avança.
+Página que acompanha o 1º turno: presidente do Brasil, governador de cada estado, e os mais votados a senador, deputado federal e deputado estadual do estado escolhido. O gráfico de presidente e governador mostra os três mais votados conforme a apuração das seções avança. As listas abrem com oito nomes e podem chegar a vinte.
 
 O [cron-job.org](https://console.cron-job.org/jobs) chama `POST /api/atualizar` a cada minuto. Essa rota lê os arquivos do TSE e grava a série no Neon. A página pede `GET /api/apuracao` a cada 15 segundos. Essa leitura usa o cache do Next.js e só volta ao banco quando a apuração muda.
 

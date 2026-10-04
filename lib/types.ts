@@ -22,6 +22,7 @@ export type RaceView = {
   gap: number | null;
   zeroed: boolean;
   top: Candidate[];
+  others: Candidate[];
   roster: Candidate[];
   points: { pst: number; percents: Record<string, number> }[];
   trends: { id: string; projected: number; marginal: number }[];

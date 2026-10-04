@@ -13,6 +13,8 @@ import { rankedCandidates } from "@/lib/view";
 
 export const maxDuration = 30;
 
+const UPDATE_BATCH = 20;
+
 type RaceResult = {
   race: string;
   status: "waiting" | "unchanged" | "updated" | "finalized" | "error";
@@ -63,7 +65,11 @@ export async function POST(request: Request) {
     throw error;
   }
 
-  const results = await Promise.all(configs.map((race) => updateRace(race)));
+  const results: RaceResult[] = [];
+  for (let index = 0; index < configs.length; index += UPDATE_BATCH) {
+    const batch = configs.slice(index, index + UPDATE_BATCH);
+    results.push(...(await Promise.all(batch.map((race) => updateRace(race)))));
+  }
   const errors = results.filter((result) => result.status === "error");
   if (results.some((result) => result.status === "updated")) {
     revalidateTag("apuracao", "max");

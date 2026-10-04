@@ -6,6 +6,7 @@ import { projectPercent, trendAt, trendCurve } from "../lib/trend";
 import { parseTsePayload } from "../lib/tse";
 import { buildRaceView, rosterCandidates, topCandidates } from "../lib/view";
 import type { Candidate } from "../lib/types";
+import { STATE_OPTIONS } from "../lib/labels";
 import { pickElections, races, type EleConfig, type RaceConfig } from "../lib/races";
 
 const president: RaceConfig = {
@@ -164,7 +165,7 @@ test("a tendência mistura o acumulado com a composição recente", () => {
   assert.ok(Math.abs(trendAt(100, 30, 44, fit.marginal) - 48.2) < 1e-9);
 });
 
-test("mostra os quatro primeiros e a diferença", () => {
+test("mostra os três primeiros no gráfico e o restante só na lista", () => {
   const candidates = [5, 4, 3, 2, 1].map((percent, index) =>
     candidate({ id: String(index), percent, name: `C${index}` }),
   );
@@ -188,9 +189,14 @@ test("mostra os quatro primeiros e a diferença", () => {
 
   assert.deepEqual(
     topCandidates(candidates).map((item) => item.percent),
-    [5, 4, 3, 2],
+    [5, 4, 3],
   );
-  assert.equal(view.top.length, 4);
+  assert.equal(view.top.length, 3);
+  assert.deepEqual(
+    view.others.map((item) => item.percent),
+    [2, 1],
+  );
+  assert.deepEqual(Object.keys(view.points[0]?.percents ?? {}), ["0", "1", "2"]);
   assert.deepEqual(
     rosterCandidates(candidates).map((item) => item.number),
     ["0", "1", "2", "3", "4"],
@@ -286,9 +292,16 @@ const eleConfig: EleConfig = {
 
 test("emite senador e deputados de cada estado na eleição estadual", () => {
   const configs = races({ federal: "6257", state: "6259" });
-  assert.equal(configs.filter((race) => race.kind === "chart").length, 4);
+  assert.equal(STATE_OPTIONS.length, 27);
+  assert.equal(configs.filter((race) => race.kind === "chart").length, 28);
   const lists = configs.filter((race) => race.kind === "list");
-  assert.equal(lists.length, 9);
+  assert.equal(lists.length, 81);
+  for (const state of STATE_OPTIONS) {
+    assert.ok(configs.some((race) => race.id === `governador-${state.id}`));
+    for (const office of ["senador", "deputado-federal", "deputado-estadual"]) {
+      assert.ok(configs.some((race) => race.id === `${office}-${state.id}`));
+    }
+  }
 
   const expected = [
     ["senador-rn", "0005", "rn", "Senador"],
@@ -307,7 +320,7 @@ test("emite senador e deputados de cada estado na eleição estadual", () => {
   }
 });
 
-test("a lista guarda só os dez válidos e não monta série", () => {
+test("a lista guarda só os vinte válidos e não monta série", () => {
   const senator: RaceConfig = {
     id: "senador-rn",
     title: "Senador",
@@ -318,7 +331,7 @@ test("a lista guarda só os dez válidos e não monta série", () => {
     kind: "list",
   };
   const candidates = [
-    ...Array.from({ length: 12 }, (_, index) =>
+    ...Array.from({ length: 25 }, (_, index) =>
       candidate({
         id: String(index),
         percent: index,
@@ -354,11 +367,12 @@ test("a lista guarda só os dez válidos e não monta série", () => {
     latest,
   );
 
-  assert.equal(view.top.length, 10);
+  assert.equal(view.top.length, 20);
   assert.deepEqual(
     view.top.map((item) => item.id),
-    ["11", "10", "9", "8", "7", "6", "5", "4", "3", "2"],
+    Array.from({ length: 20 }, (_, index) => String(24 - index)),
   );
+  assert.deepEqual(view.others, []);
   assert.ok(view.top.every((item) => item.destination === "Válido"));
   assert.deepEqual(view.roster, []);
   assert.deepEqual(view.points, []);

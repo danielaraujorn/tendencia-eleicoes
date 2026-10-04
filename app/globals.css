@@ -205,8 +205,21 @@ footer {
   padding: 6px 0;
 }
 
-.ranking .candidates li {
+.ranking .candidates li,
+.candidates li.other {
   grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.more {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 650;
+  cursor: pointer;
 }
 
 .candidate-name {
