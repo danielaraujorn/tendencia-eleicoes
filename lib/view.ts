@@ -15,7 +15,7 @@ export type StoredState = StoredPoint & {
   sourceUpdatedAt: string | null;
 };
 
-const CHART_SIZE = 3;
+const CHART_SIZE = 5;
 const CHART_MIN_PST = 1;
 const CROSSOVER_MIN_PST = 20;
 const ZEROED_LIST = 10;
@@ -115,7 +115,7 @@ export function buildRaceView(
     ? topCandidates(current.candidates, current.candidates.length)
     : [];
   const top = zeroed ? ranked.slice(0, ZEROED_LIST) : ranked.slice(0, CHART_SIZE);
-  const others = zeroed ? [] : ranked.slice(CHART_SIZE);
+  const others: Candidate[] = [];
   const roster = current ? rosterCandidates(current.candidates) : [];
   const series = chartPoints(history, latest);
   const totals = series.map((point) => ({

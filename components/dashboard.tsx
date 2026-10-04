@@ -128,6 +128,7 @@ export function Dashboard({
     useState<PollPhase>(initialPhase);
   const [stateId, setStateId] =
     useState<StateId>(initialState);
+  const [rankingsExpanded, setRankingsExpanded] = useState(false);
 
   useEffect(() => {
     if (preview) return;
@@ -351,6 +352,10 @@ export function Dashboard({
             }
             waiting={waiting}
             rosterOnly={phase === "before"}
+            expanded={rankingsExpanded}
+            onToggle={() =>
+              setRankingsExpanded((open) => !open)
+            }
           />
         ))}
       </div>

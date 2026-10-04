@@ -20,14 +20,19 @@ import { formatArrival, formatPercent } from "@/lib/format";
 import { trendCurve } from "@/lib/trend";
 import type { RaceView } from "@/lib/types";
 
+function clampPercent(value: number) {
+  return Math.min(100, Math.max(0, value));
+}
+
 export function chartRows(view: RaceView) {
   const rows = view.points.map((point) => {
     const row: Record<string, number | null> = {
       pst: point.pst,
     };
     for (const candidate of view.top) {
+      const percent = point.percents[candidate.id];
       row[candidate.id] =
-        point.percents[candidate.id] ?? null;
+        typeof percent === "number" ? clampPercent(percent) : null;
       row[`${candidate.id}__trend`] = null;
     }
     return row;
@@ -63,9 +68,10 @@ export function chartRows(view: RaceView) {
     };
     for (const candidate of view.top) {
       row[candidate.id] = null;
+      const percent = curves.find((curve) => curve.id === candidate.id)
+        ?.points[index]?.percent;
       row[`${candidate.id}__trend`] =
-        curves.find((curve) => curve.id === candidate.id)
-          ?.points[index]?.percent ?? null;
+        typeof percent === "number" ? clampPercent(percent) : null;
     }
     rows.push(row);
   }
@@ -106,7 +112,7 @@ function useNarrowScreen() {
   );
 }
 
-function yDomain(rows: Record<string, number | null>[]) {
+export function yDomain(rows: Record<string, number | null>[]) {
   const values = rows.flatMap((row) =>
     Object.entries(row)
       .filter(
@@ -119,7 +125,10 @@ function yDomain(rows: Record<string, number | null>[]) {
   const min = Math.min(...values);
   const max = Math.max(...values);
   const span = Math.max(max - min, 1);
-  return [min - span * 0.15, max + span * 0.15];
+  return [
+    Math.max(0, min - span * 0.15),
+    Math.min(100, max + span * 0.15),
+  ];
 }
 
 export function RaceChart({

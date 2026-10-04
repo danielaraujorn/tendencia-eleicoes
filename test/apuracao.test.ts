@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { chartRows, tooltipItems } from "../components/race-chart";
+import { chartRows, tooltipItems, yDomain } from "../components/race-chart";
 import { formatArrival } from "../lib/format";
 import { shouldRecordHistory } from "../lib/history";
 import { arrivalAt, crossoverPst, projectPercent, trendAt, trendCurve } from "../lib/trend";
@@ -256,8 +256,8 @@ test("formata o mesmo instante no fuso de quem vê", () => {
   assert.equal(formatArrival(nextDay, at, "America/Noronha"), "05/10 01:10");
 });
 
-test("mostra os três primeiros no gráfico e o restante só na lista", () => {
-  const candidates = [5, 4, 3, 2, 1].map((percent, index) =>
+test("mostra só os cinco mais votados no gráfico", () => {
+  const candidates = [6, 5, 4, 3, 2, 1].map((percent, index) =>
     candidate({ id: String(index), percent, name: `C${index}` }),
   );
   const view = buildRaceView(
@@ -280,19 +280,16 @@ test("mostra os três primeiros no gráfico e o restante só na lista", () => {
 
   assert.deepEqual(
     topCandidates(candidates).map((item) => item.percent),
-    [5, 4, 3],
+    [6, 5, 4, 3, 2],
   );
-  assert.equal(view.top.length, 3);
-  assert.deepEqual(
-    view.others.map((item) => item.percent),
-    [2, 1],
-  );
-  assert.deepEqual(Object.keys(view.points[0]?.percents ?? {}), ["0", "1", "2"]);
+  assert.equal(view.top.length, 5);
+  assert.deepEqual(view.others, []);
+  assert.deepEqual(Object.keys(view.points[0]?.percents ?? {}), ["0", "1", "2", "3", "4"]);
   assert.deepEqual(
     rosterCandidates(candidates).map((item) => item.number),
-    ["0", "1", "2", "3", "4"],
+    ["0", "1", "2", "3", "4", "5"],
   );
-  assert.equal(view.roster.length, 5);
+  assert.equal(view.roster.length, 6);
   assert.equal(view.leader?.name, "C0");
   assert.equal(view.gap, 1);
   assert.equal(view.points.length, 1);
@@ -404,6 +401,48 @@ test("candidato ausente no começo da série não entra como zero voto", () => {
   assert.ok(trend);
   assert.ok(Math.abs(trend.marginal - 40) < 1e-9);
   assert.equal(view.points[0]?.percents["0"], undefined);
+});
+
+test("o gráfico fica entre 0% e 100%", () => {
+  assert.deepEqual(yDomain([{ pst: 10, a: 0, b: 100 }]), [0, 100]);
+  assert.deepEqual(yDomain([{ pst: 10, a: -12, b: 140 }]), [0, 100]);
+  const [low, high] = yDomain([{ pst: 20, a: 40, b: 55 }]);
+  assert.ok(low >= 0 && high <= 100);
+  assert.ok(low < 40 && high > 55);
+
+  const rows = chartRows({
+    id: "presidente",
+    title: "Presidente",
+    scope: "Brasil",
+    available: true,
+    pst: 30,
+    finalized: false,
+    sourceUpdatedAt: null,
+    leader: null,
+    runnerUp: null,
+    gap: null,
+    zeroed: false,
+    top: [
+      candidate({ id: "0", percent: 90 }),
+      candidate({ id: "1", percent: 4 }),
+    ],
+    others: [],
+    roster: [],
+    points: [{ pst: 30, percents: { "0": 90, "1": 4 } }],
+    trends: [
+      { id: "0", projected: 160, marginal: 190 },
+      { id: "1", projected: -20, marginal: -30 },
+    ],
+    crossover: null,
+  });
+  const values = rows.flatMap((row) =>
+    Object.entries(row)
+      .filter(([key]) => key !== "pst")
+      .map(([, value]) => value),
+  );
+  assert.ok(values.some((value) => value === 100));
+  assert.ok(values.some((value) => value === 0));
+  assert.ok(values.every((value) => value === null || (value >= 0 && value <= 100)));
 });
 
 test("o tooltip da projeção usa a curva tracejada quando a série sólida está vazia", () => {

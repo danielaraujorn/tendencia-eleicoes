@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { CandidateName } from "@/components/candidate-name";
 import { formatPercent } from "@/lib/format";
 import type { RaceView } from "@/lib/types";
@@ -12,13 +11,16 @@ export function RankingPanel({
   title,
   waiting,
   rosterOnly = false,
+  expanded,
+  onToggle,
 }: {
   view: RaceView | null;
   title: string;
   waiting: string;
   rosterOnly?: boolean;
+  expanded: boolean;
+  onToggle: () => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
   const listed = view?.top ?? [];
   const showList = Boolean(view?.available && !rosterOnly && !view.zeroed && listed.length > 0);
   const visible = expanded ? listed : listed.slice(0, PREVIEW);
@@ -51,7 +53,7 @@ export function RankingPanel({
             <button
               type="button"
               className="more"
-              onClick={() => setExpanded((open) => !open)}
+              onClick={onToggle}
             >
               {expanded ? "Mostrar menos" : "Mostrar mais"}
             </button>
