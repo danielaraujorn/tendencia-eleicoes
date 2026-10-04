@@ -85,7 +85,9 @@ export function parseTsePayload(data: TseFile): ParsedRace {
 
   return {
     pst,
-    finalized: data.and === "f" || pst >= 100 - 1e-6,
+    finalized:
+      (typeof data.and === "string" && data.and.trim().toLowerCase() === "f") ||
+      pst >= 100 - 1e-6,
     sourceUpdatedAt: date && time ? `${date} ${time}` : date ?? null,
     candidates: [...byId.values()],
   };

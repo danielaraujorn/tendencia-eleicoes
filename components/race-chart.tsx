@@ -1,6 +1,10 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import {
   CartesianGrid,
   Line,
@@ -18,15 +22,19 @@ import type { RaceView } from "@/lib/types";
 
 export function chartRows(view: RaceView) {
   const rows = view.points.map((point) => {
-    const row: Record<string, number | null> = { pst: point.pst };
+    const row: Record<string, number | null> = {
+      pst: point.pst,
+    };
     for (const candidate of view.top) {
-      row[candidate.id] = point.percents[candidate.id] ?? null;
+      row[candidate.id] =
+        point.percents[candidate.id] ?? null;
       row[`${candidate.id}__trend`] = null;
     }
     return row;
   });
 
-  if (view.trends.length === 0 || rows.length === 0) return rows;
+  if (view.trends.length === 0 || rows.length === 0)
+    return rows;
 
   const last = rows[rows.length - 1];
   const currentPst = Number(last.pst);
@@ -40,7 +48,11 @@ export function chartRows(view: RaceView) {
     return [
       {
         id: trend.id,
-        points: trendCurve(currentPst, current, trend.marginal),
+        points: trendCurve(
+          currentPst,
+          current,
+          trend.marginal,
+        ),
       },
     ];
   });
@@ -52,8 +64,8 @@ export function chartRows(view: RaceView) {
     for (const candidate of view.top) {
       row[candidate.id] = null;
       row[`${candidate.id}__trend`] =
-        curves.find((curve) => curve.id === candidate.id)?.points[index]
-          ?.percent ?? null;
+        curves.find((curve) => curve.id === candidate.id)
+          ?.points[index]?.percent ?? null;
     }
     rows.push(row);
   }
@@ -65,14 +77,18 @@ type TooltipEntry = {
   value?: unknown;
 };
 
-export function tooltipItems<T extends TooltipEntry>(payload: readonly T[]) {
+export function tooltipItems<T extends TooltipEntry>(
+  payload: readonly T[],
+) {
   const numeric = (item: T, trend: boolean) => {
     if (!item.dataKey) return false;
     const key = String(item.dataKey);
     if (key.endsWith("__trend") !== trend) return false;
     return typeof item.value === "number";
   };
-  const solid = payload.filter((item) => numeric(item, false));
+  const solid = payload.filter((item) =>
+    numeric(item, false),
+  );
   if (solid.length > 0) return solid;
   return payload.filter((item) => numeric(item, true));
 }
@@ -82,7 +98,8 @@ function useNarrowScreen() {
     (onChange) => {
       const query = window.matchMedia("(max-width: 720px)");
       query.addEventListener("change", onChange);
-      return () => query.removeEventListener("change", onChange);
+      return () =>
+        query.removeEventListener("change", onChange);
     },
     () => window.matchMedia("(max-width: 720px)").matches,
     () => false,
@@ -92,7 +109,10 @@ function useNarrowScreen() {
 function yDomain(rows: Record<string, number | null>[]) {
   const values = rows.flatMap((row) =>
     Object.entries(row)
-      .filter(([key, value]) => key !== "pst" && typeof value === "number")
+      .filter(
+        ([key, value]) =>
+          key !== "pst" && typeof value === "number",
+      )
       .map(([, value]) => value as number),
   );
   if (values.length === 0) return [0, 1];
@@ -137,40 +157,69 @@ export function RaceChart({
       <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={rows}
-          margin={{ top: view.crossover ? 28 : 8, right: 8, left: 0, bottom: 0 }}
+          margin={{
+            top: view.crossover ? 28 : 8,
+            right: 8,
+            left: 0,
+            bottom: 0,
+          }}
         >
-          <CartesianGrid stroke="#e6dfd2" vertical={false} />
+          <CartesianGrid
+            stroke="#e6dfd2"
+            vertical={false}
+          />
           <XAxis
             dataKey="pst"
             type="number"
             domain={[0, 100]}
-            ticks={narrow ? [0, 25, 50, 75, 100] : undefined}
+            ticks={
+              narrow ? [0, 25, 50, 75, 100] : undefined
+            }
             tickFormatter={(value) => `${value}%`}
             stroke="#8a8175"
-            tick={{ fill: "#5c564c", fontSize: narrow ? 11 : 12 }}
+            tick={{
+              fill: "#5c564c",
+              fontSize: narrow ? 11 : 12,
+            }}
           />
           <YAxis
             domain={domain}
-            tickFormatter={(value) => `${Number(value).toFixed(0)}%`}
+            tickFormatter={(value) =>
+              `${Number(value).toFixed(0)}%`
+            }
             stroke="#8a8175"
-            tick={{ fill: "#5c564c", fontSize: narrow ? 11 : 12 }}
+            tick={{
+              fill: "#5c564c",
+              fontSize: narrow ? 11 : 12,
+            }}
             width={narrow ? 32 : 42}
           />
           <Tooltip
-            allowEscapeViewBox={narrow ? { x: false, y: false } : undefined}
-            wrapperStyle={narrow ? { maxWidth: "100%", zIndex: 2 } : undefined}
+            allowEscapeViewBox={
+              narrow ? { x: false, y: false } : undefined
+            }
+            wrapperStyle={
+              narrow
+                ? { maxWidth: "100%", zIndex: 2 }
+                : undefined
+            }
             content={({ active, payload, label }) => {
               if (!active || !payload?.length) return null;
               const items = tooltipItems(payload);
               if (items.length === 0) return null;
               return (
                 <div className="tooltip">
-                  <p>{formatPercent(Number(label))} apurado</p>
+                  <p>
+                    {formatPercent(Number(label))} apurado
+                  </p>
                   <ul>
                     {items.map((item) => (
                       <li key={String(item.dataKey)}>
-                        <span style={{ background: item.color }} />
-                        {item.name}: {formatPercent(Number(item.value))}
+                        <span
+                          style={{ background: item.color }}
+                        />
+                        {item.name}:{" "}
+                        {formatPercent(Number(item.value))}
                       </li>
                     ))}
                   </ul>
@@ -184,8 +233,12 @@ export function RaceChart({
               type="monotone"
               dataKey={candidate.id}
               name={candidate.name}
-              stroke={colorFor(candidate.id, ids, candidate.number)}
-              strokeWidth={2.4}
+              stroke={colorFor(
+                candidate.id,
+                ids,
+                candidate.number,
+              )}
+              strokeWidth={3.5}
               dot={rows.length < 8}
               activeDot={narrow ? { r: 6 } : undefined}
               connectNulls
@@ -198,7 +251,11 @@ export function RaceChart({
               type="linear"
               dataKey={`${candidate.id}__trend`}
               name={candidate.name}
-              stroke={colorFor(candidate.id, ids, candidate.number)}
+              stroke={colorFor(
+                candidate.id,
+                ids,
+                candidate.number,
+              )}
               strokeWidth={1.6}
               strokeDasharray="6 5"
               dot={false}

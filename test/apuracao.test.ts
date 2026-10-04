@@ -5,7 +5,7 @@ import { formatArrival } from "../lib/format";
 import { shouldRecordHistory } from "../lib/history";
 import { arrivalAt, crossoverPst, projectPercent, trendAt, trendCurve } from "../lib/trend";
 import { parseTsePayload } from "../lib/tse";
-import { buildRaceView, rosterCandidates, topCandidates } from "../lib/view";
+import { buildApuracao, buildRaceView, rosterCandidates, topCandidates } from "../lib/view";
 import type { Candidate } from "../lib/types";
 import { STATE_OPTIONS } from "../lib/labels";
 import { pickElections, races, type EleConfig, type RaceConfig } from "../lib/races";
@@ -82,10 +82,41 @@ test("interpreta percentual com vírgula e achata os candidatos", () => {
 
   assert.equal(parsed.pst, 12.5);
   assert.equal(parsed.finalized, false);
+  assert.equal(
+    parseTsePayload({ and: "F", s: { pstn: "40" } }).finalized,
+    true,
+  );
   assert.equal(parsed.sourceUpdatedAt, "04/10/2026 17:10:00");
   assert.equal(parsed.candidates.length, 2);
   assert.equal(parsed.candidates.find((item) => item.id === "1")?.percent, 40.123456789);
   assert.equal(parsed.candidates.find((item) => item.id === "1")?.party, "PT");
+});
+
+test("a resposta traz a captura mais recente", () => {
+  const response = buildApuracao(
+    [president],
+    [
+      {
+        race: "presidente:21270",
+        pst: 10,
+        candidates: [],
+        finalized: false,
+        sourceUpdatedAt: "04/10/2026 17:10:00",
+        capturedAt: new Date("2026-10-04T20:10:00.000Z"),
+      },
+      {
+        race: "presidente:21270",
+        pst: 12,
+        candidates: [],
+        finalized: false,
+        sourceUpdatedAt: "04/10/2026 17:20:00",
+        capturedAt: new Date("2026-10-04T20:20:00.000Z"),
+      },
+    ],
+    [],
+    "oficial",
+  );
+  assert.equal(response.capturedAt, "2026-10-04T20:20:00.000Z");
 });
 
 test("guarda ponto novo a cada 0,1 e no fechamento", () => {
@@ -577,6 +608,7 @@ test("emite senador e deputados de cada estado na eleição estadual", () => {
     ["senador-rn", "0005", "rn", "Senador"],
     ["deputado-federal-sp", "0006", "sp", "Deputado Federal"],
     ["deputado-estadual-rj", "0007", "rj", "Deputado Estadual"],
+    ["deputado-estadual-df", "0008", "df", "Deputado Distrital"],
   ] as const;
 
   for (const [id, cargo, abrangencia, title] of expected) {

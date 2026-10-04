@@ -248,5 +248,15 @@ export function buildApuracao(
     }),
   );
 
-  return { source, races };
+  return { source, capturedAt: latestCapturedAt(states), races };
+}
+
+function latestCapturedAt(states: StoredState[]) {
+  let latest = Number.NEGATIVE_INFINITY;
+  for (const state of states) {
+    const time = state.capturedAt?.getTime();
+    if (time === undefined || Number.isNaN(time)) continue;
+    if (time > latest) latest = time;
+  }
+  return Number.isFinite(latest) ? new Date(latest).toISOString() : null;
 }

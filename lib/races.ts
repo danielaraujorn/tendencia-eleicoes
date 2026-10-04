@@ -67,21 +67,24 @@ export function races(codes: ElectionCodes): RaceConfig[] {
   }));
 
   const lists: RaceConfig[] = STATE_OPTIONS.flatMap((state) =>
-    LIST_OFFICES.map((office) => ({
-      id: `${office.id}-${state.id}`,
-      title: office.title,
-      scope: state.label,
-      electionCode: codes.state,
-      cargo: LIST_CARGO[office.id],
-      abrangencia: state.id,
-      kind: "list" as const,
-    })),
+    LIST_OFFICES.map((office) => {
+      const distrital = office.id === "deputado-estadual" && state.id === "df";
+      return {
+        id: `${office.id}-${state.id}`,
+        title: distrital ? "Deputado Distrital" : office.title,
+        scope: state.label,
+        electionCode: codes.state,
+        cargo: distrital ? "0008" : LIST_CARGO[office.id],
+        abrangencia: state.id,
+        kind: "list" as const,
+      };
+    }),
   );
 
   return [
     {
       id: "presidente",
-      title: "Presidente",
+      title: "Presidente (Apuração nacional)",
       scope: "Brasil",
       electionCode: codes.federal,
       cargo: "0001",

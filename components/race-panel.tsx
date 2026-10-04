@@ -2,22 +2,9 @@
 
 import { CandidateName } from "@/components/candidate-name";
 import { colorFor } from "@/lib/colors";
-import { candidateLabel, formatGap, formatPercent, formatVotes } from "@/lib/format";
-import { PRESIDENT_ID } from "@/lib/labels";
+import { formatPercent, formatVotes } from "@/lib/format";
 import type { RaceView } from "@/lib/types";
 import { chartRows, RaceChart } from "./race-chart";
-
-function leadText(view: RaceView) {
-  if (!view.leader) return "Sem candidatos nesta leitura.";
-  const leader = candidateLabel(view.leader.name, view.leader.party);
-  if (!view.runnerUp || view.gap === null) {
-    return `${leader} está com ${formatPercent(view.leader.percent)}.`;
-  }
-  if (Math.abs(view.gap) < 0.005) {
-    return `${leader} e ${view.runnerUp.name} estão empatados, com ${formatPercent(view.leader.percent)}.`;
-  }
-  return `${leader} está na frente com ${formatPercent(view.leader.percent)}, a ${formatGap(view.gap)} de ${view.runnerUp.name}.`;
-}
 
 export function RacePanel({
   view,
@@ -29,7 +16,9 @@ export function RacePanel({
   rosterOnly?: boolean;
 }) {
   const rows = view ? chartRows(view) : [];
-  const listed = rosterOnly ? (view?.roster ?? []) : (view?.top ?? []);
+  const listed = rosterOnly
+    ? (view?.roster ?? [])
+    : (view?.top ?? []);
   const ids = listed.map((candidate) => candidate.id);
 
   return (
@@ -37,29 +26,11 @@ export function RacePanel({
       <header className="panel-head">
         <p className="kicker">{view?.title ?? "Disputa"}</p>
         <h2>{view?.scope ?? "—"}</h2>
-        {view?.id === PRESIDENT_ID ? (
-          <p className="note">Apuração de todo o Brasil, não só do estado selecionado.</p>
-        ) : null}
       </header>
 
       {!view?.available ? (
         <p className="waiting">{waiting}</p>
-      ) : rosterOnly ? null : (
-        <div className="summary">
-          <p className="pst">
-            {formatPercent(view.pst ?? 0)}
-            <span>das seções apuradas</span>
-          </p>
-          <p className="lead">
-            {view.zeroed
-              ? "Nenhum voto contabilizado ainda."
-              : leadText(view)}
-          </p>
-          {view.sourceUpdatedAt ? (
-            <p className="meta">Leitura do TSE: {view.sourceUpdatedAt}</p>
-          ) : null}
-        </div>
-      )}
+      ) : null}
 
       {rosterOnly ? null : (
         <div className="chart-slot">
@@ -71,14 +42,28 @@ export function RacePanel({
 
       {view?.available ? (
         <div>
-          <ul className={rosterOnly || view.zeroed ? "candidates roster" : "candidates"}>
+          <ul
+            className={
+              rosterOnly || view.zeroed
+                ? "candidates roster"
+                : "candidates"
+            }
+          >
             {listed.map((candidate) => {
-              const trend = view.trends.find((item) => item.id === candidate.id);
+              const trend = view.trends.find(
+                (item) => item.id === candidate.id,
+              );
               return (
                 <li key={candidate.id}>
                   <span
                     className="swatch"
-                    style={{ background: colorFor(candidate.id, ids, candidate.number) }}
+                    style={{
+                      background: colorFor(
+                        candidate.id,
+                        ids,
+                        candidate.number,
+                      ),
+                    }}
                   />
                   <span>
                     <CandidateName
@@ -88,7 +73,8 @@ export function RacePanel({
                     />
                     {rosterOnly || view.zeroed ? null : (
                       <small>
-                        {candidate.destination && candidate.destination !== "Válido"
+                        {candidate.destination &&
+                        candidate.destination !== "Válido"
                           ? `${candidate.destination} · `
                           : ""}
                         {formatVotes(candidate.votes)} votos
@@ -99,7 +85,10 @@ export function RacePanel({
                     <span className="numbers">
                       {formatPercent(candidate.percent)}
                       {trend ? (
-                        <small>tendência {formatPercent(trend.projected)}</small>
+                        <small>
+                          tendência{" "}
+                          {formatPercent(trend.projected)}
+                        </small>
                       ) : null}
                     </span>
                   )}
@@ -114,21 +103,13 @@ export function RacePanel({
                       name={candidate.name}
                       party={candidate.party}
                     />
-                    <span className="numbers">{formatPercent(candidate.percent)}</span>
+                    <span className="numbers">
+                      {formatPercent(candidate.percent)}
+                    </span>
                   </li>
                 ))
               : null}
           </ul>
-          {!rosterOnly && !view.zeroed && view.trends.length > 0 ? (
-            <p className="note">
-              A curva tracejada supõe que as seções que faltam repetem a
-              composição recente dos votos e têm tamanho parecido com as já
-              apuradas. Não é projeção oficial.
-              {view.crossover
-                ? " A linha vertical marca o horário em que o 1º e o 2º trocariam de lugar se o ritmo recente das seções se mantiver. Esse horário aparece no fuso de quem está vendo a página."
-                : null}
-            </p>
-          ) : null}
         </div>
       ) : (
         <div />

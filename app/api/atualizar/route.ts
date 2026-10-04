@@ -11,7 +11,7 @@ import { getRaceCursor, recordSnapshot } from "@/lib/store";
 import { fetchRace } from "@/lib/tse";
 import { rankedCandidates } from "@/lib/view";
 
-export const maxDuration = 30;
+export const maxDuration = 120;
 
 const UPDATE_BATCH = 20;
 
@@ -68,15 +68,16 @@ export async function POST(request: Request) {
   const results: RaceResult[] = [];
   for (let index = 0; index < configs.length; index += UPDATE_BATCH) {
     const batch = configs.slice(index, index + UPDATE_BATCH);
-    results.push(...(await Promise.all(batch.map((race) => updateRace(race)))));
+    const batchResults = await Promise.all(batch.map((race) => updateRace(race)));
+    results.push(...batchResults);
+    if (batchResults.some((result) => result.status === "updated")) {
+      revalidateTag("apuracao", "max");
+    }
   }
   const errors = results.filter((result) => result.status === "error");
-  if (results.some((result) => result.status === "updated")) {
-    revalidateTag("apuracao", "max");
-  }
 
   if (errors.length > 0) {
-    return Response.json({ ok: false, results }, { status: 500 });
+    return Response.json({ ok: false, results });
   }
 
   return Response.json({ ok: true, results });

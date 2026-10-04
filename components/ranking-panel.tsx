@@ -20,7 +20,6 @@ export function RankingPanel({
 }) {
   const [expanded, setExpanded] = useState(false);
   const listed = view?.top ?? [];
-  const sections = view?.available && !rosterOnly ? view.pst : null;
   const showList = Boolean(view?.available && !rosterOnly && !view.zeroed && listed.length > 0);
   const visible = expanded ? listed : listed.slice(0, PREVIEW);
   const emptyCopy =
@@ -33,10 +32,6 @@ export function RankingPanel({
       <header className="panel-head">
         <p className="kicker">{view?.title ?? title}</p>
       </header>
-
-      {sections != null ? (
-        <p className="meta sections">{formatPercent(sections)} das seções apuradas</p>
-      ) : null}
 
       {showList ? (
         <>

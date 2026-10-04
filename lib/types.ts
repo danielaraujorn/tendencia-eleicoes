@@ -31,5 +31,6 @@ export type RaceView = {
 
 export type ApuracaoResponse = {
   source: "oficial" | "simulado";
+  capturedAt: string | null;
   races: Record<string, RaceView>;
 };

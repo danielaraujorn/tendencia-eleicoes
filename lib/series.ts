@@ -7,8 +7,8 @@ export async function getCachedApuracao() {
   "use cache";
   cacheTag("apuracao");
   cacheLife({
-    stale: 60 * 60 * 24 * 7,
-    revalidate: 60 * 60 * 24 * 7,
+    stale: 30,
+    revalidate: 30,
     expire: 60 * 60 * 24 * 30,
   });
 
