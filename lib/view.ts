@@ -1,6 +1,6 @@
 import type { RaceConfig } from "./races";
 import { storageKey } from "./races";
-import { arrivalAt, crossoverPst, projectPercent, trendAt } from "./trend";
+import { arrivalAt, crossoverPst, projectPercent } from "./trend";
 import type { ApuracaoResponse, Candidate, RaceView } from "./types";
 
 export type StoredPoint = {
@@ -26,12 +26,6 @@ export function isZeroed(candidates: Candidate[]) {
     candidates.length > 0 &&
     candidates.every((candidate) => candidate.votes === 0 && candidate.percent === 0)
   );
-}
-
-function validVoteTotal(candidates: Candidate[]) {
-  const valid = candidates.filter((candidate) => candidate.destination === "Válido");
-  const pool = valid.length > 0 ? valid : candidates;
-  return pool.reduce((sum, candidate) => sum + candidate.votes, 0);
 }
 
 export function topCandidates(candidates: Candidate[], count = CHART_SIZE) {
@@ -118,10 +112,6 @@ export function buildRaceView(
   const others: Candidate[] = [];
   const roster = current ? rosterCandidates(current.candidates) : [];
   const series = chartPoints(history, latest);
-  const totals = series.map((point) => ({
-    pst: point.pst,
-    validVotes: validVoteTotal(point.candidates),
-  }));
   const points = series.map((point) => ({
     pst: point.pst,
     percents: Object.fromEntries(
@@ -133,22 +123,13 @@ export function buildRaceView(
   }));
 
   const trends = top.flatMap((candidate) => {
-    const votes = series.flatMap((point) => {
-      const found = point.candidates.find((item) => item.id === candidate.id);
-      if (!found) return [];
-      return [{ pst: point.pst, votes: found.votes }];
+    const seriesPercents = points.flatMap((point) => {
+      const percent = point.percents[candidate.id];
+      return typeof percent === "number" ? [{ pst: point.pst, percent }] : [];
     });
-    const fit = projectPercent(votes, totals);
-    const latestPoint = points[points.length - 1];
-    const currentPercent = latestPoint?.percents[candidate.id];
-    if (!fit || !latestPoint || typeof currentPercent !== "number") return [];
-    return [
-      {
-        id: candidate.id,
-        marginal: fit.marginal,
-        projected: trendAt(100, latestPoint.pst, currentPercent, fit.marginal),
-      },
-    ];
+    const projected = projectPercent(seriesPercents);
+    if (projected === null) return [];
+    return [{ id: candidate.id, projected }];
   });
 
   const leader = top[0] ?? null;
@@ -212,9 +193,9 @@ function leadCrossover(
   const pst = crossoverPst(
     currentPst,
     leaderPercent,
-    leaderTrend.marginal,
+    leaderTrend.projected,
     runnerPercent,
-    runnerTrend.marginal,
+    runnerTrend.projected,
   );
   const latestAt = latest?.capturedAt;
   if (pst === null || !latestAt || Number.isNaN(latestAt.getTime())) return null;

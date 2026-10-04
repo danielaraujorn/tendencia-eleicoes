@@ -362,7 +362,7 @@ export function Dashboard({
 
       <footer>
         Fonte: arquivos oficiais de divulgação do TSE. A
-        curva de tendência não é pesquisa nem resultado
+        reta de tendência não é pesquisa nem resultado
         oficial.
       </footer>
     </main>

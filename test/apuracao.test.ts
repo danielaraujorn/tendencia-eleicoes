@@ -3,7 +3,7 @@ import test from "node:test";
 import { chartRows, tooltipItems, yDomain } from "../components/race-chart";
 import { formatArrival } from "../lib/format";
 import { shouldRecordHistory } from "../lib/history";
-import { arrivalAt, crossoverPst, projectPercent, trendAt, trendCurve } from "../lib/trend";
+import { arrivalAt, crossoverPst, projectPercent } from "../lib/trend";
 import { parseTsePayload } from "../lib/tse";
 import { buildApuracao, buildRaceView, rosterCandidates, topCandidates } from "../lib/view";
 import type { Candidate } from "../lib/types";
@@ -126,84 +126,45 @@ test("guarda ponto novo a cada 0,1 e no fechamento", () => {
   assert.equal(shouldRecordHistory(99.95, 100, true), true);
 });
 
-test("a tendência mistura o acumulado com a composição recente", () => {
+test("a reta só aparece com histórico e apuração acima de 5%", () => {
   assert.equal(
-    projectPercent(
-      [
-        { pst: 6, votes: 40 },
-        { pst: 8, votes: 42 },
-      ],
-      [
-        { pst: 6, validVotes: 100 },
-        { pst: 8, validVotes: 100 },
-      ],
-    ),
+    projectPercent([
+      { pst: 6, percent: 40 },
+      { pst: 8, percent: 42 },
+    ]),
     null,
   );
   assert.equal(
-    projectPercent(
-      [
-        { pst: 1, votes: 40 },
-        { pst: 3, votes: 80 },
-        { pst: 4, votes: 120 },
-      ],
-      [
-        { pst: 1, validVotes: 100 },
-        { pst: 3, validVotes: 200 },
-        { pst: 4, validVotes: 300 },
-      ],
-    ),
-    null,
-  );
-  assert.equal(
-    projectPercent(
-      [
-        { pst: 10, votes: 40 },
-        { pst: 10.5, votes: 50 },
-        { pst: 11, votes: 60 },
-      ],
-      [
-        { pst: 10, validVotes: 100 },
-        { pst: 10.5, validVotes: 120 },
-        { pst: 11, validVotes: 140 },
-      ],
-    ),
+    projectPercent([
+      { pst: 1, percent: 40 },
+      { pst: 3, percent: 42 },
+      { pst: 4, percent: 44 },
+    ]),
     null,
   );
 
-  // Percentuais 40, 42 e 44. A reta antiga terminaria em 58.
-  // Os incrementos são todos de 50%, então o fechamento é 0,3*44 + 0,7*50.
-  const fit = projectPercent(
-    [
-      { pst: 10, votes: 240 },
-      { pst: 20, votes: 315 },
-      { pst: 30, votes: 440 },
-    ],
-    [
-      { pst: 10, validVotes: 600 },
-      { pst: 20, validVotes: 750 },
-      { pst: 30, validVotes: 1000 },
-    ],
+  // 40, 42 e 44 em 10, 20 e 30. A reta em 100% é 58.
+  assert.equal(
+    projectPercent([
+      { pst: 10, percent: 40 },
+      { pst: 20, percent: 42 },
+      { pst: 30, percent: 44 },
+    ]),
+    58,
   );
-  assert.ok(fit);
-  assert.ok(Math.abs(fit.marginal - 50) < 1e-9);
-  assert.ok(Math.abs(fit.projected - 48.2) < 1e-9);
 
-  const curve = trendCurve(30, 44, fit.marginal);
-  const mid = curve[7];
-  assert.ok(mid);
-  assert.ok(Math.abs(mid.pst - 65) < 1e-9);
-  assert.ok(Math.abs(mid.percent - 614 / 13) < 1e-9);
-  assert.ok(Math.abs(trendAt(100, 30, 44, fit.marginal) - 48.2) < 1e-9);
+  const turned = [
+    ...Array.from({ length: 31 }, (_, index) => ({ pst: 10 + index, percent: 40 })),
+    ...Array.from({ length: 10 }, (_, index) => ({ pst: 41 + index, percent: 41 + index })),
+  ];
+  assert.ok(Math.abs((projectPercent(turned) ?? 0) - 100) < 1e-9);
 });
 
 test("acha o ponto em que as duas primeiras tendências se cruzam", () => {
-  assert.equal(crossoverPst(30, 44, 40, 40, 50), 42);
-  assert.ok(Math.abs(trendAt(42, 30, 44, 40) - trendAt(42, 30, 40, 50)) < 1e-9);
-  assert.equal(crossoverPst(30, 44, 50, 40, 40), null);
-  assert.equal(crossoverPst(30, 44, 48, 40, 49), null);
-  assert.equal(crossoverPst(30, 44, 50, 40, 50), null);
-  assert.equal(crossoverPst(30, 50, 40, 80 / 3, 50), 100);
+  assert.equal(crossoverPst(30, 50, 30, 40, 60), 47.5);
+  assert.equal(crossoverPst(30, 44, 50, 40, 46), null);
+  assert.equal(crossoverPst(30, 44, 60, 40, 42), null);
+  assert.equal(crossoverPst(30, 50, 40, 40, 40), 100);
 });
 
 test("projeta o horário da troca pelo ritmo recente das seções", () => {
@@ -399,7 +360,7 @@ test("candidato ausente no começo da série não entra como zero voto", () => {
   });
   const trend = view.trends.find((item) => item.id === "0");
   assert.ok(trend);
-  assert.ok(Math.abs(trend.marginal - 40) < 1e-9);
+  assert.ok(Math.abs(trend.projected - 40) < 1e-9);
   assert.equal(view.points[0]?.percents["0"], undefined);
 });
 
@@ -430,8 +391,8 @@ test("o gráfico fica entre 0% e 100%", () => {
     roster: [],
     points: [{ pst: 30, percents: { "0": 90, "1": 4 } }],
     trends: [
-      { id: "0", projected: 160, marginal: 190 },
-      { id: "1", projected: -20, marginal: -30 },
+      { id: "0", projected: 160 },
+      { id: "1", projected: -20 },
     ],
     crossover: null,
   });
@@ -465,7 +426,7 @@ test("o tooltip da projeção usa a curva tracejada quando a série sólida est�
   assert.equal(tooltipItems([{ dataKey: "0__trend", value: null }]).length, 0);
 });
 
-test("projeta a mistura a partir dos votos válidos da disputa", () => {
+test("projeta a reta a partir do percentual acumulado", () => {
   const snapshots = [
     { pst: 10, votes: [240, 360], percents: [40, 60] },
     { pst: 20, votes: [315, 435], percents: [42, 58] },
@@ -492,18 +453,14 @@ test("projeta a mistura a partir dos votos válidos da disputa", () => {
   });
   const trend = view.trends.find((item) => item.id === "0");
   assert.ok(trend);
-  assert.ok(Math.abs(trend.marginal - 50) < 1e-9);
-  assert.ok(Math.abs(trend.projected - 48.2) < 1e-9);
+  assert.ok(Math.abs(trend.projected - 58) < 1e-9);
 
   const rows = chartRows(view);
   const end = rows[rows.length - 1];
-  const mid = rows.find((row) => Math.abs(Number(row.pst) - 65) < 1e-9);
   assert.ok(end);
   assert.equal(end.pst, 100);
   assert.equal(end["0"], null);
-  assert.ok(Math.abs(Number(end["0__trend"]) - 48.2) < 1e-9);
-  assert.ok(mid);
-  assert.ok(Math.abs(Number(mid["0__trend"]) - 614 / 13) < 1e-9);
+  assert.ok(Math.abs(Number(end["0__trend"]) - 58) < 1e-9);
   assert.equal(view.crossover, null);
 });
 
@@ -544,7 +501,7 @@ test("marca o instante em que o segundo lugar ultrapassa o primeiro", () => {
   const runnerTrend = view.trends.find((item) => item.id === "1");
   assert.ok(leaderTrend);
   assert.ok(runnerTrend);
-  const expectedPst = crossoverPst(30, 52.5, leaderTrend.marginal, 47.5, runnerTrend.marginal);
+  const expectedPst = crossoverPst(30, 52.5, leaderTrend.projected, 47.5, runnerTrend.projected);
   assert.ok(expectedPst);
   assert.ok(expectedPst > 30 && expectedPst <= 100);
   assert.ok(view.crossover);

@@ -17,7 +17,6 @@ import {
 } from "recharts";
 import { colorFor } from "@/lib/colors";
 import { formatArrival, formatPercent } from "@/lib/format";
-import { trendCurve } from "@/lib/trend";
 import type { RaceView } from "@/lib/types";
 
 function clampPercent(value: number) {
@@ -42,39 +41,18 @@ export function chartRows(view: RaceView) {
     return rows;
 
   const last = rows[rows.length - 1];
-  const currentPst = Number(last.pst);
   for (const trend of view.trends) {
     last[`${trend.id}__trend`] = last[trend.id] ?? null;
   }
 
-  const curves = view.trends.flatMap((trend) => {
-    const current = last[trend.id];
-    if (typeof current !== "number") return [];
-    return [
-      {
-        id: trend.id,
-        points: trendCurve(
-          currentPst,
-          current,
-          trend.marginal,
-        ),
-      },
-    ];
-  });
-  const samples = curves[0]?.points.length ?? 0;
-  for (let index = 0; index < samples; index += 1) {
-    const row: Record<string, number | null> = {
-      pst: curves[0]?.points[index]?.pst ?? currentPst,
-    };
-    for (const candidate of view.top) {
-      row[candidate.id] = null;
-      const percent = curves.find((curve) => curve.id === candidate.id)
-        ?.points[index]?.percent;
-      row[`${candidate.id}__trend`] =
-        typeof percent === "number" ? clampPercent(percent) : null;
-    }
-    rows.push(row);
+  const end: Record<string, number | null> = { pst: 100 };
+  for (const candidate of view.top) {
+    end[candidate.id] = null;
+    const projected = view.trends.find((trend) => trend.id === candidate.id)?.projected;
+    end[`${candidate.id}__trend`] =
+      typeof projected === "number" ? clampPercent(projected) : null;
   }
+  rows.push(end);
   return rows;
 }
 
