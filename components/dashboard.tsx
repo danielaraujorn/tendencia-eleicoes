@@ -323,13 +323,9 @@ export function Dashboard({
           {data?.source === "simulado"
             ? " · dados do simulado"
             : ""}
+          {reading ? ` · Leitura do TSE: ${reading}` : ""}
           {error ? ` · ${error}` : ""}
         </p>
-        {reading ? (
-          <p className="meta reading">
-            Leitura do TSE: {reading}
-          </p>
-        ) : null}
       </header>
 
       <div className="races">
