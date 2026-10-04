@@ -35,7 +35,10 @@ export function projectPercent(points: PercentPoint[]) {
   if (!last || last.pst < MIN_PST || last.pst >= MAX_PST) return null;
 
   const window = rows.filter((row) => row.pst >= last.pst - WINDOW_PST - 1e-9);
-  return fitLine(window.length >= MIN_POINTS ? window : rows);
+  // Um salto maior que a janela (a apuração nacional) deixa uma leitura só.
+  // As últimas leituras seguem a direção recente; a série inteira puxa o começo da noite.
+  const sample = window.length >= MIN_POINTS ? window : rows.slice(-MIN_POINTS);
+  return fitLine(sample);
 }
 
 export function crossoverPst(

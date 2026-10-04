@@ -23,12 +23,19 @@ function clampPercent(value: number) {
   return Math.min(100, Math.max(0, value));
 }
 
+const PLOTTED_CANDIDATES = 2;
+
+function plottedCandidates(view: RaceView) {
+  return view.top.slice(0, PLOTTED_CANDIDATES);
+}
+
 export function chartRows(view: RaceView) {
+  const plotted = plottedCandidates(view);
   const rows = view.points.map((point) => {
     const row: Record<string, number | null> = {
       pst: point.pst,
     };
-    for (const candidate of view.top) {
+    for (const candidate of plotted) {
       const percent = point.percents[candidate.id];
       row[candidate.id] =
         typeof percent === "number" ? clampPercent(percent) : null;
@@ -41,12 +48,14 @@ export function chartRows(view: RaceView) {
     return rows;
 
   const last = rows[rows.length - 1];
-  for (const trend of view.trends) {
+  for (const candidate of plotted) {
+    const trend = view.trends.find((item) => item.id === candidate.id);
+    if (!trend) continue;
     last[`${trend.id}__trend`] = last[trend.id] ?? null;
   }
 
   const end: Record<string, number | null> = { pst: 100 };
-  for (const candidate of view.top) {
+  for (const candidate of plotted) {
     end[candidate.id] = null;
     const projected = view.trends.find((trend) => trend.id === candidate.id)?.projected;
     end[`${candidate.id}__trend`] =
@@ -216,7 +225,7 @@ export function RaceChart({
               );
             }}
           />
-          {view.top.map((candidate) => (
+          {plottedCandidates(view).map((candidate) => (
             <Line
               key={candidate.id}
               type="monotone"
@@ -234,7 +243,7 @@ export function RaceChart({
               isAnimationActive={false}
             />
           ))}
-          {view.top.map((candidate) => (
+          {plottedCandidates(view).map((candidate) => (
             <Line
               key={`${candidate.id}-trend`}
               type="linear"

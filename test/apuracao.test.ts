@@ -158,6 +158,18 @@ test("a reta só aparece com histórico e apuração acima de 5%", () => {
     ...Array.from({ length: 10 }, (_, index) => ({ pst: 41 + index, percent: 41 + index })),
   ];
   assert.ok(Math.abs((projectPercent(turned) ?? 0) - 100) < 1e-9);
+
+  // Salto de 47,3 para 64,8 deixa a janela de 10 pontos com uma leitura só.
+  // A reta segue a queda recente (50,41 → 49,58), não a série desde o início.
+  const jumped = [
+    { pst: 10, percent: 49.2 },
+    { pst: 30, percent: 50.85 },
+    { pst: 41.6, percent: 50.41 },
+    { pst: 47.3, percent: 50.2 },
+    { pst: 64.8, percent: 49.58 },
+  ];
+  const jumpedProjection = projectPercent(jumped);
+  assert.ok(jumpedProjection !== null && jumpedProjection < 49.58);
 });
 
 test("acha o ponto em que as duas primeiras tendências se cruzam", () => {
@@ -246,6 +258,10 @@ test("mostra só os cinco mais votados no gráfico", () => {
   assert.equal(view.top.length, 5);
   assert.deepEqual(view.others, []);
   assert.deepEqual(Object.keys(view.points[0]?.percents ?? {}), ["0", "1", "2", "3", "4"]);
+  assert.deepEqual(
+    Object.keys(chartRows(view)[0] ?? {}).sort(),
+    ["0", "0__trend", "1", "1__trend", "pst"],
+  );
   assert.deepEqual(
     rosterCandidates(candidates).map((item) => item.number),
     ["0", "1", "2", "3", "4", "5"],
