@@ -18,21 +18,22 @@ export async function recordSnapshot(
   race: string,
   parsed: ParsedRace,
   etag: string | null,
+  options?: { history?: boolean },
 ) {
+  const keepHistory = options?.history !== false;
   const db = getDb();
   return db.transaction(async (tx) => {
-    const lastRows = await tx
-      .select({ pst: snapshots.pst })
-      .from(snapshots)
-      .where(eq(snapshots.race, race))
-      .orderBy(desc(snapshots.id))
-      .limit(1);
-    const lastPst = lastRows[0]?.pst ?? null;
-    const writeHistory = shouldRecordHistory(
-      lastPst,
-      parsed.pst,
-      parsed.finalized,
-    );
+    let writeHistory = false;
+    if (keepHistory) {
+      const lastRows = await tx
+        .select({ pst: snapshots.pst })
+        .from(snapshots)
+        .where(eq(snapshots.race, race))
+        .orderBy(desc(snapshots.id))
+        .limit(1);
+      const lastPst = lastRows[0]?.pst ?? null;
+      writeHistory = shouldRecordHistory(lastPst, parsed.pst, parsed.finalized);
+    }
 
     await tx
       .insert(raceState)

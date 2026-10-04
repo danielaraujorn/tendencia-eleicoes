@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { CandidateName } from "@/components/candidate-name";
 import { colorFor } from "@/lib/colors";
 import { candidateLabel, formatGap, formatPercent, formatVotes } from "@/lib/format";
 import type { RaceView } from "@/lib/types";
@@ -21,12 +21,10 @@ function leadText(view: RaceView) {
 export function RacePanel({
   view,
   waiting,
-  scope,
   rosterOnly = false,
 }: {
   view: RaceView | null;
   waiting: string;
-  scope?: ReactNode;
   rosterOnly?: boolean;
 }) {
   const rows = view ? chartRows(view) : [];
@@ -37,9 +35,7 @@ export function RacePanel({
     <section className="panel">
       <header className="panel-head">
         <p className="kicker">{view?.title ?? "Disputa"}</p>
-        <h2>
-          {scope ?? view?.scope ?? "—"}
-        </h2>
+        <h2>{view?.scope ?? "—"}</h2>
       </header>
 
       {!view?.available ? (
@@ -81,21 +77,19 @@ export function RacePanel({
                     style={{ background: colorFor(candidate.id, ids, candidate.number) }}
                   />
                   <span>
-                    <strong>
-                      {candidate.number ? `${candidate.number} ` : ""}
-                      {candidate.name}
-                    </strong>
-                    <small>
-                      {candidate.party || "sem partido"}
-                      {rosterOnly || view.zeroed ? null : (
-                        <>
-                          {candidate.destination && candidate.destination !== "Válido"
-                            ? ` · ${candidate.destination}`
-                            : ""}
-                          {` · ${formatVotes(candidate.votes)} votos`}
-                        </>
-                      )}
-                    </small>
+                    <CandidateName
+                      number={candidate.number}
+                      name={candidate.name}
+                      party={candidate.party}
+                    />
+                    {rosterOnly || view.zeroed ? null : (
+                      <small>
+                        {candidate.destination && candidate.destination !== "Válido"
+                          ? `${candidate.destination} · `
+                          : ""}
+                        {formatVotes(candidate.votes)} votos
+                      </small>
+                    )}
                   </span>
                   {rosterOnly || view.zeroed ? null : (
                     <span className="numbers">

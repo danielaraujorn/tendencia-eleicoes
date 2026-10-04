@@ -53,14 +53,14 @@ h1 {
 
 h2 {
   margin: 0;
-  font-size: clamp(1.45rem, 2.4vw, 1.8rem);
+  font-size: clamp(1.25rem, 2vw, 1.55rem);
   line-height: 1.2;
 }
 
 .kicker {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   color: var(--accent);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -68,32 +68,59 @@ h2 {
 
 .deck {
   max-width: 38rem;
-  margin: 14px 0 0;
-  font-size: 1.15rem;
-  line-height: 1.45;
+  margin: 12px 0 0;
+  font-size: 1.05rem;
+  line-height: 1.4;
 }
 
 .meta,
 .note,
 footer {
   color: var(--muted);
-  font-size: 0.92rem;
+  font-size: 0.84rem;
+}
+
+.state-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+  margin-top: 14px;
+}
+
+.state-bar .kicker {
+  margin: 0;
+}
+
+.state-bar .scope-select {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(1.15rem, 2vw, 1.4rem);
+  font-weight: 560;
+  letter-spacing: -0.03em;
 }
 
 .races {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  gap: 14px;
   align-items: start;
-  margin-top: 18px;
+  margin-top: 14px;
+}
+
+.rankings {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+  margin-top: 14px;
 }
 
 .panel {
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: 14px;
   min-width: 0;
-  padding: 22px;
+  padding: 16px;
 }
 
 .panel-head {
@@ -127,13 +154,13 @@ footer {
 
 .summary {
   display: grid;
-  gap: 8px;
-  margin-top: 18px;
+  gap: 6px;
+  margin-top: 12px;
 }
 
 .pst {
   margin: 0;
-  font-size: clamp(2.6rem, 6vw, 4rem);
+  font-size: clamp(2.3rem, 5vw, 3.4rem);
   line-height: 0.9;
 }
 
@@ -141,10 +168,10 @@ footer {
 .lead,
 .candidates small {
   display: block;
-  margin-top: 6px;
+  margin-top: 2px;
   color: var(--muted);
   font-family: var(--font-sans), sans-serif;
-  font-size: 0.95rem;
+  font-size: 0.82rem;
   font-weight: 400;
   letter-spacing: 0;
 }
@@ -153,8 +180,8 @@ footer {
   margin: 0;
   max-width: 40rem;
   color: var(--ink);
-  font-size: 1.08rem;
-  line-height: 1.4;
+  font-size: 0.98rem;
+  line-height: 1.35;
 }
 
 .chart {
@@ -164,17 +191,32 @@ footer {
 
 .candidates {
   list-style: none;
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   padding: 0;
+  font-size: 0.9rem;
 }
 
 .candidates li {
   display: grid;
-  grid-template-columns: 14px 1fr auto;
-  gap: 12px;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  gap: 8px;
   align-items: center;
   border-top: 1px solid var(--line);
-  padding: 12px 0;
+  padding: 6px 0;
+}
+
+.ranking .candidates li {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.candidate-name {
+  line-height: 1.25;
+}
+
+.party {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 500;
 }
 
 .candidates.roster li {
@@ -189,6 +231,7 @@ footer {
 
 .numbers {
   text-align: right;
+  font-size: 0.9rem;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
 }
@@ -198,8 +241,12 @@ footer {
 }
 
 .waiting {
-  margin: 22px 0 8px;
-  font-size: 1.15rem;
+  margin: 14px 0 4px;
+  font-size: 1rem;
+}
+
+.sections {
+  margin: 8px 0 0;
 }
 
 .tooltip {
@@ -242,7 +289,7 @@ footer {
     grid-template-rows: auto auto auto auto;
   }
 
-  .panel {
+  .races > .panel {
     display: grid;
     grid-template-rows: subgrid;
     grid-row: 1 / span 4;
@@ -258,7 +305,8 @@ footer {
 }
 
 @media (max-width: 960px) {
-  .races {
+  .races,
+  .rankings {
     grid-template-columns: 1fr;
   }
 }
@@ -269,16 +317,7 @@ footer {
     padding-top: 24px;
   }
 
-  .candidates li {
-    display: grid;
-  }
-
   .chart {
     height: 240px;
-  }
-
-  .numbers {
-    grid-column: 2 / -1;
-    text-align: left;
   }
 }

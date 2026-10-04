@@ -6,7 +6,7 @@ import { projectPercent, trendAt, trendCurve } from "../lib/trend";
 import { parseTsePayload } from "../lib/tse";
 import { buildRaceView, rosterCandidates, topCandidates } from "../lib/view";
 import type { Candidate } from "../lib/types";
-import { pickElections, type EleConfig, type RaceConfig } from "../lib/races";
+import { pickElections, races, type EleConfig, type RaceConfig } from "../lib/races";
 
 const president: RaceConfig = {
   id: "presidente",
@@ -15,6 +15,7 @@ const president: RaceConfig = {
   electionCode: "21270",
   cargo: "0001",
   abrangencia: "br",
+  kind: "chart",
 };
 
 function candidate(partial: Partial<Candidate> & Pick<Candidate, "id" | "percent">): Candidate {
@@ -283,6 +284,87 @@ const eleConfig: EleConfig = {
   ],
 };
 
+test("emite senador e deputados de cada estado na eleição estadual", () => {
+  const configs = races({ federal: "6257", state: "6259" });
+  assert.equal(configs.filter((race) => race.kind === "chart").length, 4);
+  const lists = configs.filter((race) => race.kind === "list");
+  assert.equal(lists.length, 9);
+
+  const expected = [
+    ["senador-rn", "0005", "rn", "Senador"],
+    ["deputado-federal-sp", "0006", "sp", "Deputado Federal"],
+    ["deputado-estadual-rj", "0007", "rj", "Deputado Estadual"],
+  ] as const;
+
+  for (const [id, cargo, abrangencia, title] of expected) {
+    const race = configs.find((item) => item.id === id);
+    assert.ok(race);
+    assert.equal(race.kind, "list");
+    assert.equal(race.cargo, cargo);
+    assert.equal(race.electionCode, "6259");
+    assert.equal(race.abrangencia, abrangencia);
+    assert.equal(race.title, title);
+  }
+});
+
+test("a lista guarda só os dez válidos e não monta série", () => {
+  const senator: RaceConfig = {
+    id: "senador-rn",
+    title: "Senador",
+    scope: "Rio Grande do Norte",
+    electionCode: "6259",
+    cargo: "0005",
+    abrangencia: "rn",
+    kind: "list",
+  };
+  const candidates = [
+    ...Array.from({ length: 12 }, (_, index) =>
+      candidate({
+        id: String(index),
+        percent: index,
+        votes: index * 10,
+        destination: "Válido",
+        seq: index,
+      }),
+    ),
+    candidate({
+      id: "nulo",
+      percent: 99,
+      votes: 5000,
+      destination: "Anulado",
+      seq: 0,
+    }),
+  ];
+  const latest = {
+    race: "senador-rn:6259",
+    pst: 40,
+    finalized: false,
+    sourceUpdatedAt: "04/10/2026 18:00:00",
+    candidates,
+  };
+  const view = buildRaceView(
+    senator,
+    [
+      {
+        race: latest.race,
+        pst: 20,
+        candidates,
+      },
+    ],
+    latest,
+  );
+
+  assert.equal(view.top.length, 10);
+  assert.deepEqual(
+    view.top.map((item) => item.id),
+    ["11", "10", "9", "8", "7", "6", "5", "4", "3", "2"],
+  );
+  assert.ok(view.top.every((item) => item.destination === "Válido"));
+  assert.deepEqual(view.roster, []);
+  assert.deepEqual(view.points, []);
+  assert.deepEqual(view.trends, []);
+});
+
 test("escolhe a ordinária federal e estadual e ignora a suplementar", () => {
   assert.deepEqual(pickElections(eleConfig, 1), {
     federal: "6257",
@@ -320,12 +402,15 @@ function assertResultFields(data: TseResultFile, url: string) {
   );
 }
 
-test("interpreta o simulado do TSE para presidente e governadores", async () => {
+test("interpreta o simulado do TSE para presidente, governadores e listas", async () => {
   const urls = [
     "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/br/br-c0001-e021270-u.json",
     "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21272/dados/rn/rn-c0003-e021272-u.json",
     "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21272/dados/sp/sp-c0003-e021272-u.json",
     "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21272/dados/rj/rj-c0003-e021272-u.json",
+    "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21272/dados/rn/rn-c0005-e021272-u.json",
+    "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21272/dados/rn/rn-c0006-e021272-u.json",
+    "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21272/dados/rn/rn-c0007-e021272-u.json",
   ];
 
   for (const url of urls) {

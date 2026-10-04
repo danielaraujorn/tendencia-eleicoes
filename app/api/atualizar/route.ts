@@ -9,8 +9,9 @@ import {
 } from "@/lib/races";
 import { getRaceCursor, recordSnapshot } from "@/lib/store";
 import { fetchRace } from "@/lib/tse";
+import { rankedCandidates } from "@/lib/view";
 
-export const maxDuration = 10;
+export const maxDuration = 30;
 
 type RaceResult = {
   race: string;
@@ -33,10 +34,16 @@ async function updateRace(race: RaceConfig): Promise<RaceResult> {
     return { race: race.id, status: "error", message: fetched.message };
   }
 
-  const wrote = await recordSnapshot(key, fetched.payload, fetched.etag);
+  const payload =
+    race.kind === "list"
+      ? { ...fetched.payload, candidates: rankedCandidates(fetched.payload.candidates) }
+      : fetched.payload;
+  const wrote = await recordSnapshot(key, payload, fetched.etag, {
+    history: race.kind === "chart",
+  });
   return {
     race: race.id,
-    status: wrote ? "updated" : "unchanged",
+    status: wrote || race.kind === "list" ? "updated" : "unchanged",
     pst: fetched.payload.pst,
   };
 }

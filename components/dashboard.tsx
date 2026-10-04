@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { RacePanel } from "@/components/race-panel";
-import { GOVERNOR_OPTIONS, PRESIDENT_ID, type GovernorId } from "@/lib/labels";
+import { RankingPanel } from "@/components/ranking-panel";
+import {
+  LIST_OFFICES,
+  PRESIDENT_ID,
+  STATE_OPTIONS,
+  stateRaceId,
+  type StateId,
+} from "@/lib/labels";
 import { POLL_END_MS, POLL_INTERVAL_MS, POLL_START_MS, pollPhase, type PollPhase } from "@/lib/poll";
 import type { ApuracaoResponse } from "@/lib/types";
 
@@ -16,7 +23,7 @@ export function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
   const [phase, setPhase] = useState<PollPhase>("before");
-  const [stateId, setStateId] = useState<GovernorId>("governador-rn");
+  const [stateId, setStateId] = useState<StateId>("rn");
 
   useEffect(() => {
     let active = true;
@@ -84,6 +91,23 @@ export function Dashboard() {
           O percentual de cada candidatura conforme as seções vão sendo
           totalizadas. A página se atualiza sozinha.
         </p>
+        <div className="state-bar">
+          <label className="kicker" htmlFor="estado">
+            Estado
+          </label>
+          <select
+            id="estado"
+            className="scope-select"
+            value={stateId}
+            onChange={(event) => setStateId(event.target.value as StateId)}
+          >
+            {STATE_OPTIONS.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
         <p className="meta">
           {phase === "before"
             ? "A atualização automática começa às 17h, horário de Brasília."
@@ -103,24 +127,21 @@ export function Dashboard() {
         />
 
         <RacePanel
-          view={data?.races[stateId] ?? null}
+          view={data?.races[stateRaceId("governador", stateId)] ?? null}
           waiting={waiting}
           rosterOnly={phase === "before"}
-          scope={
-            <select
-              className="scope-select"
-              aria-label="Estado"
-              value={stateId}
-              onChange={(event) => setStateId(event.target.value as GovernorId)}
-            >
-              {GOVERNOR_OPTIONS.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          }
         />
+      </div>
+
+      <div className="rankings">
+        {LIST_OFFICES.map((office) => (
+          <RankingPanel
+            key={office.id}
+            title={office.title}
+            view={data?.races[stateRaceId(office.id, stateId)] ?? null}
+            waiting={waiting}
+          />
+        ))}
       </div>
 
       <footer>

@@ -1,3 +1,7 @@
+import { LIST_OFFICES, STATE_OPTIONS } from "./labels";
+
+export type RaceKind = "chart" | "list";
+
 export type RaceConfig = {
   id: string;
   title: string;
@@ -5,6 +9,7 @@ export type RaceConfig = {
   electionCode: string;
   cargo: string;
   abrangencia: string;
+  kind: RaceKind;
 };
 
 export type ElectionCodes = {
@@ -44,7 +49,35 @@ export function tseBase() {
   ).replace(/\/$/, "");
 }
 
+const LIST_CARGO: Record<(typeof LIST_OFFICES)[number]["id"], string> = {
+  senador: "0005",
+  "deputado-federal": "0006",
+  "deputado-estadual": "0007",
+};
+
 export function races(codes: ElectionCodes): RaceConfig[] {
+  const governors: RaceConfig[] = STATE_OPTIONS.map((state) => ({
+    id: `governador-${state.id}`,
+    title: "Governador",
+    scope: state.label,
+    electionCode: codes.state,
+    cargo: "0003",
+    abrangencia: state.id,
+    kind: "chart",
+  }));
+
+  const lists: RaceConfig[] = STATE_OPTIONS.flatMap((state) =>
+    LIST_OFFICES.map((office) => ({
+      id: `${office.id}-${state.id}`,
+      title: office.title,
+      scope: state.label,
+      electionCode: codes.state,
+      cargo: LIST_CARGO[office.id],
+      abrangencia: state.id,
+      kind: "list" as const,
+    })),
+  );
+
   return [
     {
       id: "presidente",
@@ -53,31 +86,10 @@ export function races(codes: ElectionCodes): RaceConfig[] {
       electionCode: codes.federal,
       cargo: "0001",
       abrangencia: "br",
+      kind: "chart",
     },
-    {
-      id: "governador-rn",
-      title: "Governador",
-      scope: "Rio Grande do Norte",
-      electionCode: codes.state,
-      cargo: "0003",
-      abrangencia: "rn",
-    },
-    {
-      id: "governador-sp",
-      title: "Governador",
-      scope: "São Paulo",
-      electionCode: codes.state,
-      cargo: "0003",
-      abrangencia: "sp",
-    },
-    {
-      id: "governador-rj",
-      title: "Governador",
-      scope: "Rio de Janeiro",
-      electionCode: codes.state,
-      cargo: "0003",
-      abrangencia: "rj",
-    },
+    ...governors,
+    ...lists,
   ];
 }
 

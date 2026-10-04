@@ -16,6 +16,7 @@ export type StoredState = StoredPoint & {
 
 const TOP = 4;
 const ZEROED_LIST = 10;
+export const LIST_SIZE = 10;
 
 export function isZeroed(candidates: Candidate[]) {
   return (
@@ -36,6 +37,13 @@ export function topCandidates(candidates: Candidate[], count = TOP) {
     .slice(0, count);
 }
 
+export function rankedCandidates(candidates: Candidate[], count = LIST_SIZE) {
+  return topCandidates(
+    candidates.filter((candidate) => candidate.destination === "Válido"),
+    count,
+  );
+}
+
 export function rosterCandidates(candidates: Candidate[]) {
   return [...candidates].sort((a, b) => {
     const left = Number(a.number);
@@ -46,6 +54,37 @@ export function rosterCandidates(candidates: Candidate[]) {
     if (a.number !== b.number) return a.number.localeCompare(b.number, "pt-BR");
     return a.seq - b.seq || a.name.localeCompare(b.name, "pt-BR");
   });
+}
+
+function listRaceView(
+  config: RaceConfig,
+  current: StoredPoint | null,
+  latest: StoredState | null,
+  zeroed: boolean,
+): RaceView {
+  const top = current ? rankedCandidates(current.candidates) : [];
+  const leader = top[0] ?? null;
+  const runnerUp = top[1] ?? null;
+
+  return {
+    id: config.id,
+    title: config.title,
+    scope: config.scope,
+    available: Boolean(current),
+    pst: current?.pst ?? null,
+    finalized: latest?.finalized ?? false,
+    sourceUpdatedAt: latest?.sourceUpdatedAt ?? null,
+    leader: leader
+      ? { name: leader.name, party: leader.party, percent: leader.percent }
+      : null,
+    runnerUp: runnerUp ? { name: runnerUp.name, percent: runnerUp.percent } : null,
+    gap: leader && runnerUp ? leader.percent - runnerUp.percent : null,
+    zeroed,
+    top,
+    roster: [],
+    points: [],
+    trends: [],
+  };
 }
 
 function chartPoints(history: StoredPoint[], latest: StoredState | null) {
@@ -65,6 +104,9 @@ export function buildRaceView(
 ): RaceView {
   const current = latest ?? history[history.length - 1] ?? null;
   const zeroed = Boolean(current && isZeroed(current.candidates));
+  if (config.kind === "list") {
+    return listRaceView(config, current, latest, zeroed);
+  }
   const top = current
     ? topCandidates(current.candidates, zeroed ? ZEROED_LIST : TOP)
     : [];
