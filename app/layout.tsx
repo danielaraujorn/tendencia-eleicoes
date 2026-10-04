@@ -1,0 +1,33 @@
+import type { Metadata } from "next";
+import { Fraunces, Source_Sans_3 } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next"
+import "./globals.css";
+
+const display = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-display",
+});
+
+const sans = Source_Sans_3({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
+
+export const metadata: Metadata = {
+  title: "Tendência da apuração 2026",
+  description:
+    "Acompanhamento da apuração para presidente e governadores de RN, SP e RJ.",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <html lang="pt-BR" className={`${display.variable} ${sans.variable}`}>
+      <body>
+        {children}
+        <Analytics />
+      </body>
+    </html>
+  );
+}

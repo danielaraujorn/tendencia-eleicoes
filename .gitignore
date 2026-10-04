@@ -1,5 +1,8 @@
+node_modules*
+.next
+.env
+.env.local
+.env*.local
 sheets_credentials*
 sheet_data*
 twitter_credentials*
-node_modules*
-.env

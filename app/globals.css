@@ -1,0 +1,284 @@
+:root {
+  color-scheme: light;
+  --paper: #f3efe6;
+  --ink: #1c1915;
+  --muted: #5c564c;
+  --line: #ddd4c4;
+  --card: #fffdf8;
+  --accent: #9a3412;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+body {
+  font-family: var(--font-sans), "Source Sans 3", sans-serif;
+  min-height: 100vh;
+}
+
+main {
+  width: calc(100% - 48px);
+  margin: 0 auto;
+  padding: 40px 0 64px;
+}
+
+.masthead {
+  border-bottom: 1px solid var(--ink);
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+}
+
+h1,
+h2,
+.pst {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 560;
+  letter-spacing: -0.03em;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2.4rem, 5vw, 4.2rem);
+  line-height: 0.95;
+}
+
+h2 {
+  margin: 0;
+  font-size: clamp(1.45rem, 2.4vw, 1.8rem);
+  line-height: 1.2;
+}
+
+.kicker {
+  margin: 0 0 8px;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.deck {
+  max-width: 38rem;
+  margin: 14px 0 0;
+  font-size: 1.15rem;
+  line-height: 1.45;
+}
+
+.meta,
+.note,
+footer {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.races {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+  margin-top: 18px;
+}
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  min-width: 0;
+  padding: 22px;
+}
+
+.panel-head {
+  display: block;
+}
+
+.scope-select {
+  appearance: none;
+  field-sizing: content;
+  display: inline-block;
+  width: auto;
+  max-width: 100%;
+  margin: 0;
+  padding: 0 1.35em 0 0;
+  border: 0;
+  background: transparent
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%231c1915' stroke-width='1.5'/%3E%3C/svg%3E")
+    no-repeat right center;
+  background-size: 0.62em 0.42em;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+  cursor: pointer;
+}
+
+.scope-select:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.summary {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.pst {
+  margin: 0;
+  font-size: clamp(2.6rem, 6vw, 4rem);
+  line-height: 0.9;
+}
+
+.pst span,
+.lead,
+.candidates small {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-family: var(--font-sans), sans-serif;
+  font-size: 0.95rem;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.lead {
+  margin: 0;
+  max-width: 40rem;
+  color: var(--ink);
+  font-size: 1.08rem;
+  line-height: 1.4;
+}
+
+.chart {
+  height: 380px;
+  margin-top: 12px;
+}
+
+.candidates {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.candidates li {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  border-top: 1px solid var(--line);
+  padding: 12px 0;
+}
+
+.candidates.roster li {
+  grid-template-columns: 14px 1fr;
+}
+
+.swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 99px;
+}
+
+.numbers {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.numbers small {
+  font-weight: 500;
+}
+
+.waiting {
+  margin: 22px 0 8px;
+  font-size: 1.15rem;
+}
+
+.tooltip {
+  background: var(--ink);
+  color: #f6f1e8;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+}
+
+.tooltip p,
+.tooltip ul {
+  margin: 0;
+}
+
+.tooltip ul {
+  padding: 0;
+  list-style: none;
+}
+
+.tooltip li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.tooltip span {
+  width: 8px;
+  height: 8px;
+  border-radius: 99px;
+}
+
+footer {
+  margin-top: 28px;
+}
+
+@media (min-width: 961px) {
+  .races {
+    grid-template-rows: auto auto auto auto;
+  }
+
+  .panel {
+    display: grid;
+    grid-template-rows: subgrid;
+    grid-row: 1 / span 4;
+  }
+
+  .races > .panel:nth-child(1) {
+    grid-column: 1;
+  }
+
+  .races > .panel:nth-child(2) {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 960px) {
+  .races {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  main {
+    width: calc(100% - 20px);
+    padding-top: 24px;
+  }
+
+  .candidates li {
+    display: grid;
+  }
+
+  .chart {
+    height: 240px;
+  }
+
+  .numbers {
+    grid-column: 2 / -1;
+    text-align: left;
+  }
+}

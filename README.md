@@ -1,24 +1,23 @@
-# Tendência do resultado da eleição
+# Tendência da apuração 2026
 
-### No primeiro turno das eleições eu fiz um gráfico de tendência de forma manual só para conseguir visualizar melhor para onde estava caminhando a porcentagem de votos dos principais candidatos de acordo com o progresso da apuração das urnas.
+Página que acompanha o 1º turno: presidente do Brasil e governador de RN, SP e RJ. O gráfico mostra o percentual de cada candidatura conforme a apuração das seções avança.
 
-### No segundo turno eu resolvi automatizar isso para aprender a usar algumas APIs (Google sheets, puppeteer, twitter).
+O [cron-job.org](https://console.cron-job.org/jobs) chama `POST /api/atualizar` a cada minuto. Essa rota lê os arquivos do TSE e grava a série no Neon. A página pede `GET /api/apuracao` a cada 15 segundos. Essa leitura usa o cache do Next.js e só volta ao banco quando a apuração muda.
 
----
+## Job no cron-job.org
 
-### Aqui está o gráfico que gerei no primeiro turno onde pude prever ligeiramente quando Lula iria igualhar a contagem dos votos com o Bolsonaro (Com uma apuração um pouco maior eu consegui prever a porcentagem final de cada candidato).
+Depois do deploy:
 
-![Gráfico gerado no primeiro turno](./primeiro_turno.png)
+- URL: `https://<domínio>/api/atualizar`
+- Método: POST
+- Agenda: a cada 1 minuto, a partir das 16h50 de domingo, horário de Brasília
+- Header: `Authorization: Bearer <CRON_SECRET>`
+- O `CRON_SECRET` é o mesmo valor configurado na Vercel
 
----
+## Variáveis
 
-O programa tem as seguintes funcionalidades
+Veja `.env.example`. Em produção, `TSE_BASE_URL` fica em `https://resultados.tse.jus.br/oficial`. Os códigos da eleição saem de `{TSE_BASE_URL}/comum/config/ele-c.json`, publicado antes da apuração. No 1º turno de 2026 esse arquivo lista a federal `6257` e a estadual `6259`. `TSE_ROUND=2` lê o 2º turno (`6258` e `6260`).
 
-1. Entra na api do TSE para verificar os dados da apuraçao do segundo turno das eleições de 2022
-1. Atualiza os dados de uma tabela do google sheets que gera automaticamente um grafico que possui uma linha de tendência com média movel, aqui está o [link público da tabela](https://docs.google.com/spreadsheets/d/12BC8k7vgbsZartBZkJmAkgA1O5UtgDxMqSJXGrEDVOo/edit?usp=sharing)
-1. Faz um screenshot do gráfico
-1. Faz uma postagem no twitter [@TenEleicao](https://twitter.com/TenEleicao).
-1. Caso dê algo errado, ele me manda uma dm para avisar que o programa morreu
-1. Caso a verificação de dar errado der errado, o servidor me manda uma dm a cada 5 minutos para a minha conta no twitter para avisar que o programa continua rodando
+`TSE_FEDERAL_ELECTION` e `TSE_STATE_ELECTION` só entram se as duas estiverem definidas. Sem elas, vale o `ele-c.json`.
 
-<!-- forever -m 100 -c ts-node src/index.ts -->
+O arquivo de resultado (`…-u.json`) responde 404 até a divulgação, a partir das 17h. Os campos desse JSON estão na especificação EA20 do TSE. O simulado em `https://resultados-sim.tse.jus.br/simulado/simulado2026` já serve o mesmo formato.
