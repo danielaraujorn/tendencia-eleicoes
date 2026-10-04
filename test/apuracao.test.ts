@@ -229,7 +229,7 @@ test("formata o mesmo instante no fuso de quem vê", () => {
   assert.equal(formatArrival(nextDay, at, "America/Noronha"), "05/10 01:10");
 });
 
-test("mostra só os cinco mais votados no gráfico", () => {
+test("lista os cinco mais votados e plota os dois primeiros", () => {
   const candidates = [6, 5, 4, 3, 2, 1].map((percent, index) =>
     candidate({ id: String(index), percent, name: `C${index}` }),
   );

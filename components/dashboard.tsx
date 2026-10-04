@@ -20,6 +20,7 @@ import {
   pollPhase,
   type PollPhase,
 } from "@/lib/poll";
+import { seatsFor } from "@/lib/seats";
 import type {
   ApuracaoResponse,
   RaceView,
@@ -352,6 +353,7 @@ export function Dashboard({
             }
             waiting={waiting}
             rosterOnly={phase === "before"}
+            seats={seatsFor(office.id, stateId)}
             expanded={rankingsExpanded}
             onToggle={() =>
               setRankingsExpanded((open) => !open)
