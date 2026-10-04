@@ -300,6 +300,37 @@ test("mostra os três primeiros no gráfico e o restante só na lista", () => {
   assert.equal(view.crossover, null);
 });
 
+test("o gráfico começa em 1% e descarta a apuração zerada", () => {
+  const empty = [
+    candidate({ id: "0", percent: 0, votes: 0, seq: 0 }),
+    candidate({ id: "1", percent: 0, votes: 0, seq: 1 }),
+  ];
+  const counted = [
+    candidate({ id: "0", percent: 52, votes: 520, seq: 0 }),
+    candidate({ id: "1", percent: 48, votes: 480, seq: 1 }),
+  ];
+  const view = buildRaceView(
+    president,
+    [
+      { race: "presidente:21270", pst: 0, candidates: empty },
+      { race: "presidente:21270", pst: 0.4, candidates: empty },
+      { race: "presidente:21270", pst: 1, candidates: counted },
+    ],
+    {
+      race: "presidente:21270",
+      pst: 2,
+      finalized: false,
+      sourceUpdatedAt: "04/10/2026 18:00:00",
+      candidates: counted,
+    },
+  );
+
+  assert.deepEqual(
+    view.points.map((point) => point.pst),
+    [1, 2],
+  );
+});
+
 test("a leitura mais recente substitui o snapshot no mesmo percentual de seções", () => {
   const history = [
     {

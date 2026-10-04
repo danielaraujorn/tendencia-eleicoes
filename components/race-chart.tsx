@@ -171,9 +171,11 @@ export function RaceChart({
           <XAxis
             dataKey="pst"
             type="number"
-            domain={[0, 100]}
+            domain={[1, 100]}
             ticks={
-              narrow ? [0, 25, 50, 75, 100] : undefined
+              narrow
+                ? [1, 25, 50, 75, 100]
+                : [1, 20, 40, 60, 80, 100]
             }
             tickFormatter={(value) => `${value}%`}
             stroke="#8a8175"

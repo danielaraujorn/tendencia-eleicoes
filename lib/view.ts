@@ -16,6 +16,7 @@ export type StoredState = StoredPoint & {
 };
 
 const CHART_SIZE = 3;
+const CHART_MIN_PST = 1;
 const CROSSOVER_MIN_PST = 20;
 const ZEROED_LIST = 10;
 export const LIST_SIZE = 20;
@@ -97,7 +98,7 @@ function chartPoints(history: StoredPoint[], latest: StoredState | null) {
     : [...history];
   if (latest) points.push(latest);
   points.sort((a, b) => a.pst - b.pst);
-  return points;
+  return points.filter((point) => point.pst >= CHART_MIN_PST - 1e-9);
 }
 
 export function buildRaceView(
