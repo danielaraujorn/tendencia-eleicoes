@@ -20,11 +20,17 @@ function waitingCopy(source: ApuracaoResponse["source"] | null) {
   return "Aguardando o TSE. A divulgação começa às 17h, horário de Brasília.";
 }
 
-export function Dashboard({ initialState }: { initialState: StateId }) {
+export function Dashboard({
+  initialState,
+  initialPhase,
+}: {
+  initialState: StateId;
+  initialPhase: PollPhase;
+}) {
   const [data, setData] = useState<ApuracaoResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fetchedAt, setFetchedAt] = useState<Date | null>(null);
-  const [phase, setPhase] = useState<PollPhase>("before");
+  const [phase, setPhase] = useState<PollPhase>(initialPhase);
   const [stateId, setStateId] = useState<StateId>(initialState);
 
   useEffect(() => {
@@ -60,10 +66,11 @@ export function Dashboard({ initialState }: { initialState: StateId }) {
     }
 
     const now = Date.now();
-    if (now >= POLL_END_MS) {
+    const current = pollPhase(now);
+    if (current === "after") {
       setPhase("after");
       void pull();
-    } else if (now >= POLL_START_MS) {
+    } else if (current === "during") {
       begin();
     } else {
       setPhase("before");
@@ -147,6 +154,7 @@ export function Dashboard({ initialState }: { initialState: StateId }) {
             title={office.title}
             view={data?.races[stateRaceId(office.id, stateId)] ?? null}
             waiting={waiting}
+            rosterOnly={phase === "before"}
           />
         ))}
       </div>

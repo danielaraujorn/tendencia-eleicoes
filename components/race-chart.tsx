@@ -1,16 +1,18 @@
 "use client";
 
+import { useEffect, useState, useSyncExternalStore } from "react";
 import {
   CartesianGrid,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 import { colorFor } from "@/lib/colors";
-import { formatPercent } from "@/lib/format";
+import { formatArrival, formatPercent } from "@/lib/format";
 import { trendCurve } from "@/lib/trend";
 import type { RaceView } from "@/lib/types";
 
@@ -58,6 +60,35 @@ export function chartRows(view: RaceView) {
   return rows;
 }
 
+type TooltipEntry = {
+  dataKey?: unknown;
+  value?: unknown;
+};
+
+export function tooltipItems<T extends TooltipEntry>(payload: readonly T[]) {
+  const numeric = (item: T, trend: boolean) => {
+    if (!item.dataKey) return false;
+    const key = String(item.dataKey);
+    if (key.endsWith("__trend") !== trend) return false;
+    return typeof item.value === "number";
+  };
+  const solid = payload.filter((item) => numeric(item, false));
+  if (solid.length > 0) return solid;
+  return payload.filter((item) => numeric(item, true));
+}
+
+function useNarrowScreen() {
+  return useSyncExternalStore(
+    (onChange) => {
+      const query = window.matchMedia("(max-width: 720px)");
+      query.addEventListener("change", onChange);
+      return () => query.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia("(max-width: 720px)").matches,
+    () => false,
+  );
+}
+
 function yDomain(rows: Record<string, number | null>[]) {
   const values = rows.flatMap((row) =>
     Object.entries(row)
@@ -80,37 +111,57 @@ export function RaceChart({
   rows: Record<string, number | null>[];
   ids: string[];
 }) {
+  const narrow = useNarrowScreen();
+  const crossoverAt = view.crossover?.at ?? null;
+  const crossoverReadAt = view.crossover?.readAt ?? null;
+  const [crossoverLabel, setCrossoverLabel] = useState("");
+  useEffect(() => {
+    if (!crossoverAt || !crossoverReadAt) {
+      setCrossoverLabel("");
+      return;
+    }
+    setCrossoverLabel(
+      formatArrival(
+        new Date(crossoverAt),
+        new Date(crossoverReadAt),
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+      ),
+    );
+  }, [crossoverAt, crossoverReadAt]);
+
   if (rows.length === 0) return null;
   const domain = yDomain(rows);
 
   return (
     <div className="chart">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <LineChart
+          data={rows}
+          margin={{ top: view.crossover ? 28 : 8, right: 8, left: 0, bottom: 0 }}
+        >
           <CartesianGrid stroke="#e6dfd2" vertical={false} />
           <XAxis
             dataKey="pst"
             type="number"
             domain={[0, 100]}
+            ticks={narrow ? [0, 25, 50, 75, 100] : undefined}
             tickFormatter={(value) => `${value}%`}
             stroke="#8a8175"
-            tick={{ fill: "#5c564c", fontSize: 12 }}
+            tick={{ fill: "#5c564c", fontSize: narrow ? 11 : 12 }}
           />
           <YAxis
             domain={domain}
             tickFormatter={(value) => `${Number(value).toFixed(0)}%`}
             stroke="#8a8175"
-            tick={{ fill: "#5c564c", fontSize: 12 }}
-            width={42}
+            tick={{ fill: "#5c564c", fontSize: narrow ? 11 : 12 }}
+            width={narrow ? 32 : 42}
           />
           <Tooltip
+            allowEscapeViewBox={narrow ? { x: false, y: false } : undefined}
+            wrapperStyle={narrow ? { maxWidth: "100%", zIndex: 2 } : undefined}
             content={({ active, payload, label }) => {
               if (!active || !payload?.length) return null;
-              const items = payload.filter(
-                (item) =>
-                  !String(item.dataKey).endsWith("__trend") &&
-                  typeof item.value === "number",
-              );
+              const items = tooltipItems(payload);
               if (items.length === 0) return null;
               return (
                 <div className="tooltip">
@@ -136,6 +187,7 @@ export function RaceChart({
               stroke={colorFor(candidate.id, ids, candidate.number)}
               strokeWidth={2.4}
               dot={rows.length < 8}
+              activeDot={narrow ? { r: 6 } : undefined}
               connectNulls
               isAnimationActive={false}
             />
@@ -145,6 +197,7 @@ export function RaceChart({
               key={`${candidate.id}-trend`}
               type="linear"
               dataKey={`${candidate.id}__trend`}
+              name={candidate.name}
               stroke={colorFor(candidate.id, ids, candidate.number)}
               strokeWidth={1.6}
               strokeDasharray="6 5"
@@ -154,6 +207,24 @@ export function RaceChart({
               isAnimationActive={false}
             />
           ))}
+          {view.crossover ? (
+            <ReferenceLine
+              x={view.crossover.pst}
+              stroke="#9a3412"
+              strokeDasharray="3 3"
+              label={
+                crossoverLabel
+                  ? {
+                      value: crossoverLabel,
+                      position: "top",
+                      fill: "#9a3412",
+                      fontSize: 12,
+                      fontWeight: 700,
+                    }
+                  : undefined
+              }
+            />
+          ) : null}
         </LineChart>
       </ResponsiveContainer>
     </div>

@@ -3,6 +3,7 @@
 import { CandidateName } from "@/components/candidate-name";
 import { colorFor } from "@/lib/colors";
 import { candidateLabel, formatGap, formatPercent, formatVotes } from "@/lib/format";
+import { PRESIDENT_ID } from "@/lib/labels";
 import type { RaceView } from "@/lib/types";
 import { chartRows, RaceChart } from "./race-chart";
 
@@ -36,6 +37,9 @@ export function RacePanel({
       <header className="panel-head">
         <p className="kicker">{view?.title ?? "Disputa"}</p>
         <h2>{view?.scope ?? "—"}</h2>
+        {view?.id === PRESIDENT_ID ? (
+          <p className="note">Apuração de todo o Brasil, não só do estado selecionado.</p>
+        ) : null}
       </header>
 
       {!view?.available ? (
@@ -120,6 +124,9 @@ export function RacePanel({
               A curva tracejada supõe que as seções que faltam repetem a
               composição recente dos votos e têm tamanho parecido com as já
               apuradas. Não é projeção oficial.
+              {view.crossover
+                ? " A linha vertical marca o horário em que o 1º e o 2º trocariam de lugar se o ritmo recente das seções se mantiver. Esse horário aparece no fuso de quem está vendo a página."
+                : null}
             </p>
           ) : null}
         </div>

@@ -1,12 +1,13 @@
 import type { RaceConfig } from "./races";
 import { storageKey } from "./races";
-import { projectPercent, trendAt } from "./trend";
+import { arrivalAt, crossoverPst, projectPercent, trendAt } from "./trend";
 import type { ApuracaoResponse, Candidate, RaceView } from "./types";
 
 export type StoredPoint = {
   race: string;
   pst: number;
   candidates: Candidate[];
+  capturedAt?: Date | null;
 };
 
 export type StoredState = StoredPoint & {
@@ -15,6 +16,7 @@ export type StoredState = StoredPoint & {
 };
 
 const CHART_SIZE = 3;
+const CROSSOVER_MIN_PST = 20;
 const ZEROED_LIST = 10;
 export const LIST_SIZE = 20;
 
@@ -85,16 +87,16 @@ function listRaceView(
     roster: [],
     points: [],
     trends: [],
+    crossover: null,
   };
 }
 
 function chartPoints(history: StoredPoint[], latest: StoredState | null) {
-  const points = [...history].sort((a, b) => a.pst - b.pst);
-  if (!latest) return points;
-  const last = points[points.length - 1];
-  if (!last || Math.abs(last.pst - latest.pst) > 1e-6) {
-    points.push(latest);
-  }
+  const points = latest
+    ? history.filter((point) => Math.abs(point.pst - latest.pst) > 1e-6)
+    : [...history];
+  if (latest) points.push(latest);
+  points.sort((a, b) => a.pst - b.pst);
   return points;
 }
 
@@ -130,11 +132,11 @@ export function buildRaceView(
   }));
 
   const trends = top.flatMap((candidate) => {
-    const votes = series.map((point) => ({
-      pst: point.pst,
-      votes:
-        point.candidates.find((item) => item.id === candidate.id)?.votes ?? 0,
-    }));
+    const votes = series.flatMap((point) => {
+      const found = point.candidates.find((item) => item.id === candidate.id);
+      if (!found) return [];
+      return [{ pst: point.pst, votes: found.votes }];
+    });
     const fit = projectPercent(votes, totals);
     const latestPoint = points[points.length - 1];
     const currentPercent = latestPoint?.percents[candidate.id];
@@ -150,6 +152,10 @@ export function buildRaceView(
 
   const leader = top[0] ?? null;
   const runnerUp = top[1] ?? null;
+  const latestPoint = points[points.length - 1];
+  const crossover = latestPoint
+    ? leadCrossover(top, trends, latestPoint.pst, latestPoint.percents, series, latest)
+    : null;
 
   return {
     id: config.id,
@@ -179,7 +185,47 @@ export function buildRaceView(
       ),
     })),
     trends,
+    crossover,
   };
+}
+
+function leadCrossover(
+  top: Candidate[],
+  trends: RaceView["trends"],
+  currentPst: number,
+  percents: Record<string, number | null>,
+  series: StoredPoint[],
+  latest: StoredState | null,
+) {
+  const leader = top[0];
+  const runnerUp = top[1];
+  if (!leader || !runnerUp) return null;
+  const leaderTrend = trends.find((item) => item.id === leader.id);
+  const runnerTrend = trends.find((item) => item.id === runnerUp.id);
+  const leaderPercent = percents[leader.id];
+  const runnerPercent = percents[runnerUp.id];
+  if (!leaderTrend || !runnerTrend) return null;
+  if (typeof leaderPercent !== "number" || typeof runnerPercent !== "number") return null;
+  if (!(currentPst >= CROSSOVER_MIN_PST)) return null;
+
+  const pst = crossoverPst(
+    currentPst,
+    leaderPercent,
+    leaderTrend.marginal,
+    runnerPercent,
+    runnerTrend.marginal,
+  );
+  const latestAt = latest?.capturedAt;
+  if (pst === null || !latestAt || Number.isNaN(latestAt.getTime())) return null;
+
+  const pace = series.flatMap((point) =>
+    point.capturedAt && !Number.isNaN(point.capturedAt.getTime())
+      ? [{ pst: point.pst, at: point.capturedAt }]
+      : [],
+  );
+  const eta = arrivalAt(pace, currentPst, pst, latestAt);
+  if (!eta) return null;
+  return { pst, at: eta.toISOString(), readAt: latestAt.toISOString() };
 }
 
 export function buildApuracao(

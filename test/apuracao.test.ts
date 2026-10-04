@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { chartRows } from "../components/race-chart";
+import { chartRows, tooltipItems } from "../components/race-chart";
+import { formatArrival } from "../lib/format";
 import { shouldRecordHistory } from "../lib/history";
-import { projectPercent, trendAt, trendCurve } from "../lib/trend";
+import { arrivalAt, crossoverPst, projectPercent, trendAt, trendCurve } from "../lib/trend";
 import { parseTsePayload } from "../lib/tse";
 import { buildRaceView, rosterCandidates, topCandidates } from "../lib/view";
 import type { Candidate } from "../lib/types";
@@ -165,6 +166,65 @@ test("a tendência mistura o acumulado com a composição recente", () => {
   assert.ok(Math.abs(trendAt(100, 30, 44, fit.marginal) - 48.2) < 1e-9);
 });
 
+test("acha o ponto em que as duas primeiras tendências se cruzam", () => {
+  assert.equal(crossoverPst(30, 44, 40, 40, 50), 42);
+  assert.ok(Math.abs(trendAt(42, 30, 44, 40) - trendAt(42, 30, 40, 50)) < 1e-9);
+  assert.equal(crossoverPst(30, 44, 50, 40, 40), null);
+  assert.equal(crossoverPst(30, 44, 48, 40, 49), null);
+  assert.equal(crossoverPst(30, 44, 50, 40, 50), null);
+  assert.equal(crossoverPst(30, 50, 40, 80 / 3, 50), 100);
+});
+
+test("projeta o horário da troca pelo ritmo recente das seções", () => {
+  const start = new Date("2026-10-04T20:00:00.000Z");
+  const minute = 60_000;
+  const latest = new Date(start.getTime() + 20 * minute);
+  const steady = arrivalAt(
+    [
+      { pst: 10, at: start },
+      { pst: 20, at: new Date(start.getTime() + 10 * minute) },
+      { pst: 30, at: latest },
+    ],
+    30,
+    42,
+    latest,
+  );
+  assert.equal(steady?.toISOString(), new Date(start.getTime() + 32 * minute).toISOString());
+
+  const weight = Math.exp((-Math.LN2 * 10) / 8);
+  const weightedPst = weight * 10 + 10;
+  const weightedMs = weight * 20 * minute + 5 * minute;
+  const unevenLatest = new Date(start.getTime() + 25 * minute);
+  const uneven = arrivalAt(
+    [
+      { pst: 0, at: start },
+      { pst: 10, at: new Date(start.getTime() + 20 * minute) },
+      { pst: 20, at: unevenLatest },
+    ],
+    20,
+    30,
+    unevenLatest,
+  );
+  assert.equal(
+    uneven?.toISOString(),
+    new Date(unevenLatest.getTime() + 10 / (weightedPst / weightedMs)).toISOString(),
+  );
+  assert.equal(arrivalAt([{ pst: 30, at: latest }], 30, 42, latest), null);
+});
+
+test("formata o mesmo instante no fuso de quem vê", () => {
+  const at = new Date("2026-10-04T22:40:00.000Z");
+  const reference = new Date("2026-10-04T21:00:00.000Z");
+  assert.equal(formatArrival(at, reference, "America/Sao_Paulo"), "19:40");
+  assert.equal(formatArrival(at, reference, "America/Manaus"), "18:40");
+  assert.equal(formatArrival(at, reference, "America/Rio_Branco"), "17:40");
+  assert.equal(formatArrival(at, reference, "America/Noronha"), "20:40");
+
+  const nextDay = new Date("2026-10-05T03:10:00.000Z");
+  assert.equal(formatArrival(nextDay, at, "America/Sao_Paulo"), "05/10 00:10");
+  assert.equal(formatArrival(nextDay, at, "America/Noronha"), "05/10 01:10");
+});
+
 test("mostra os três primeiros no gráfico e o restante só na lista", () => {
   const candidates = [5, 4, 3, 2, 1].map((percent, index) =>
     candidate({ id: String(index), percent, name: `C${index}` }),
@@ -206,6 +266,102 @@ test("mostra os três primeiros no gráfico e o restante só na lista", () => {
   assert.equal(view.gap, 1);
   assert.equal(view.points.length, 1);
   assert.equal(view.trends.length, 0);
+  assert.equal(view.crossover, null);
+});
+
+test("a leitura mais recente substitui o snapshot no mesmo percentual de seções", () => {
+  const history = [
+    {
+      race: "presidente:21270",
+      pst: 10,
+      candidates: [
+        candidate({ id: "0", name: "Ana", percent: 40, votes: 400, seq: 0 }),
+        candidate({ id: "1", name: "Bia", percent: 60, votes: 600, seq: 1 }),
+      ],
+    },
+    {
+      race: "presidente:21270",
+      pst: 30,
+      candidates: [
+        candidate({ id: "0", name: "Ana", percent: 42, votes: 420, seq: 0 }),
+        candidate({ id: "1", name: "Bia", percent: 58, votes: 580, seq: 1 }),
+      ],
+    },
+  ];
+  const view = buildRaceView(president, history, {
+    race: "presidente:21270",
+    pst: 30,
+    finalized: false,
+    sourceUpdatedAt: "04/10/2026 18:05:00",
+    candidates: [
+      candidate({ id: "0", name: "Ana", percent: 55, votes: 550, seq: 0 }),
+      candidate({ id: "1", name: "Bia", percent: 45, votes: 450, seq: 1 }),
+    ],
+  });
+
+  assert.equal(view.leader?.name, "Ana");
+  assert.equal(view.leader?.percent, 55);
+  assert.equal(view.points.length, 2);
+  assert.equal(view.points[0]?.percents["0"], 40);
+  assert.equal(view.points[1]?.percents["0"], 55);
+  assert.equal(view.points[1]?.percents["1"], 45);
+});
+
+test("candidato ausente no começo da série não entra como zero voto", () => {
+  const rows = [
+    { pst: 10, votes: [null, 100] as const },
+    { pst: 20, votes: [200, 300] as const },
+    { pst: 30, votes: [300, 450] as const },
+    { pst: 40, votes: [400, 600] as const },
+  ];
+  const history = rows.map((row) => ({
+    race: "presidente:21270",
+    pst: row.pst,
+    candidates: row.votes.flatMap((votes, index) =>
+      votes === null
+        ? []
+        : [
+            candidate({
+              id: String(index),
+              name: index === 0 ? "Ana" : "Bia",
+              votes,
+              percent: (100 * votes) / row.votes.reduce((sum, value) => sum + (value ?? 0), 0),
+              seq: index,
+            }),
+          ],
+    ),
+  }));
+  const latest = history[history.length - 1];
+  assert.ok(latest);
+  const view = buildRaceView(president, history, {
+    ...latest,
+    finalized: false,
+    sourceUpdatedAt: "04/10/2026 18:00:00",
+  });
+  const trend = view.trends.find((item) => item.id === "0");
+  assert.ok(trend);
+  assert.ok(Math.abs(trend.marginal - 40) < 1e-9);
+  assert.equal(view.points[0]?.percents["0"], undefined);
+});
+
+test("o tooltip da projeção usa a curva tracejada quando a série sólida está vazia", () => {
+  const solid = tooltipItems([
+    { dataKey: "0", value: 44, name: "Ana" },
+    { dataKey: "0__trend", value: 44, name: "Ana" },
+  ]);
+  assert.deepEqual(solid.map((item) => item.dataKey), ["0"]);
+
+  const trend = tooltipItems([
+    { dataKey: "0", value: null, name: "Ana" },
+    { dataKey: "0__trend", value: 48.2, name: "Ana" },
+    { dataKey: "1", value: null, name: "Bia" },
+    { dataKey: "1__trend", value: 51.8, name: "Bia" },
+  ]);
+  assert.deepEqual(
+    trend.map((item) => item.dataKey),
+    ["0__trend", "1__trend"],
+  );
+  assert.equal(tooltipItems([{ dataKey: "0__trend", value: null }]).length, 0);
 });
 
 test("projeta a mistura a partir dos votos válidos da disputa", () => {
@@ -247,6 +403,120 @@ test("projeta a mistura a partir dos votos válidos da disputa", () => {
   assert.ok(Math.abs(Number(end["0__trend"]) - 48.2) < 1e-9);
   assert.ok(mid);
   assert.ok(Math.abs(Number(mid["0__trend"]) - 614 / 13) < 1e-9);
+  assert.equal(view.crossover, null);
+});
+
+test("marca o instante em que o segundo lugar ultrapassa o primeiro", () => {
+  const start = new Date("2026-10-04T20:00:00.000Z");
+  const minute = 60_000;
+  const rows = [
+    { pst: 10, votes: [600, 400] as const, at: start },
+    { pst: 20, votes: [850, 650] as const, at: new Date(start.getTime() + 10 * minute) },
+    { pst: 30, votes: [1050, 950] as const, at: new Date(start.getTime() + 20 * minute) },
+  ];
+  const history = rows.map((row) => {
+    const total = row.votes[0] + row.votes[1];
+    return {
+      race: "presidente:21270",
+      pst: row.pst,
+      capturedAt: row.at,
+      candidates: row.votes.map((votes, index) =>
+        candidate({
+          id: String(index),
+          name: index === 0 ? "Ana" : "Bia",
+          percent: (100 * votes) / total,
+          votes,
+          seq: index,
+        }),
+      ),
+    };
+  });
+  const latest = history[history.length - 1];
+  assert.ok(latest);
+  const view = buildRaceView(president, history, {
+    ...latest,
+    finalized: false,
+    sourceUpdatedAt: "04/10/2026 17:20:00",
+  });
+  assert.equal(view.leader?.name, "Ana");
+  const leaderTrend = view.trends.find((item) => item.id === "0");
+  const runnerTrend = view.trends.find((item) => item.id === "1");
+  assert.ok(leaderTrend);
+  assert.ok(runnerTrend);
+  const expectedPst = crossoverPst(30, 52.5, leaderTrend.marginal, 47.5, runnerTrend.marginal);
+  assert.ok(expectedPst);
+  assert.ok(expectedPst > 30 && expectedPst <= 100);
+  assert.ok(view.crossover);
+  assert.ok(Math.abs(view.crossover.pst - expectedPst) < 1e-9);
+  const eta = arrivalAt(
+    rows.map((row) => ({ pst: row.pst, at: row.at })),
+    30,
+    view.crossover.pst,
+    latest.capturedAt,
+  );
+  assert.equal(view.crossover.at, eta?.toISOString());
+  assert.equal(view.crossover.readAt, latest.capturedAt.toISOString());
+
+  const withoutClock = history.map(({ capturedAt: _capturedAt, ...point }) => point);
+  const latestWithoutClock = withoutClock[withoutClock.length - 1];
+  assert.ok(latestWithoutClock);
+  assert.equal(
+    buildRaceView(president, withoutClock, {
+      ...latestWithoutClock,
+      finalized: false,
+      sourceUpdatedAt: "04/10/2026 17:20:00",
+    }).crossover,
+    null,
+  );
+});
+
+test("esconde a troca até 20% das seções", () => {
+  const start = new Date("2026-10-04T20:00:00.000Z");
+  const minute = 60_000;
+  const rows = [
+    { pst: 8, votes: [600, 400] as const },
+    { pst: 14, votes: [850, 650] as const },
+    { pst: 19.9, votes: [1050, 950] as const },
+  ];
+  const history = rows.map((row, index) => {
+    const total = row.votes[0] + row.votes[1];
+    return {
+      race: "presidente:21270",
+      pst: row.pst,
+      capturedAt: new Date(start.getTime() + index * 10 * minute),
+      candidates: row.votes.map((votes, candidateIndex) =>
+        candidate({
+          id: String(candidateIndex),
+          name: candidateIndex === 0 ? "Ana" : "Bia",
+          percent: (100 * votes) / total,
+          votes,
+          seq: candidateIndex,
+        }),
+      ),
+    };
+  });
+  const latest = history[history.length - 1];
+  assert.ok(latest);
+  const early = buildRaceView(president, history, {
+    ...latest,
+    finalized: false,
+    sourceUpdatedAt: "04/10/2026 17:20:00",
+  });
+  assert.ok(early.trends.length >= 2);
+  assert.equal(early.crossover, null);
+
+  const opened = history.map((point, index) =>
+    index === history.length - 1 ? { ...point, pst: 20 } : point,
+  );
+  const openedLatest = opened[opened.length - 1];
+  assert.ok(openedLatest);
+  assert.ok(
+    buildRaceView(president, opened, {
+      ...openedLatest,
+      finalized: false,
+      sourceUpdatedAt: "04/10/2026 17:20:00",
+    }).crossover,
+  );
 });
 
 const eleConfig: EleConfig = {
@@ -377,6 +647,7 @@ test("a lista guarda só os vinte válidos e não monta série", () => {
   assert.deepEqual(view.roster, []);
   assert.deepEqual(view.points, []);
   assert.deepEqual(view.trends, []);
+  assert.equal(view.crossover, null);
 });
 
 test("escolhe a ordinária federal e estadual e ignora a suplementar", () => {

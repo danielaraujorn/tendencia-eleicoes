@@ -92,3 +92,56 @@ export function projectPercent(candidate: VotePoint[], totals: ValidTotal[]) {
   if (!Number.isFinite(projected) || !Number.isFinite(marginal)) return null;
   return { projected, marginal };
 }
+
+export function crossoverPst(
+  currentPst: number,
+  percentA: number,
+  marginalA: number,
+  percentB: number,
+  marginalB: number,
+) {
+  const marginalGap = marginalB - marginalA;
+  if (!(Math.abs(marginalGap) > 1e-9)) return null;
+  const p = currentPst / 100;
+  if (!(p > 0) || !(p < 1)) return null;
+  const pst = (100 * p * (percentA - percentB - marginalA + marginalB)) / marginalGap;
+  if (!Number.isFinite(pst)) return null;
+  if (!(pst > currentPst + 1e-6) || pst > 100 + 1e-6) return null;
+  if (pst > 100 - 1e-6) return 100;
+  return pst;
+}
+
+export type PacePoint = { pst: number; at: Date };
+
+export function arrivalAt(
+  points: PacePoint[],
+  currentPst: number,
+  targetPst: number,
+  latestAt: Date,
+) {
+  if (!(targetPst > currentPst) || Number.isNaN(latestAt.getTime())) return null;
+
+  const rows = points
+    .filter((point) => Number.isFinite(point.pst) && !Number.isNaN(point.at.getTime()))
+    .sort((a, b) => a.pst - b.pst || a.at.getTime() - b.at.getTime());
+
+  let weightedPst = 0;
+  let weightedMs = 0;
+  for (let index = 1; index < rows.length; index += 1) {
+    const previous = rows[index - 1];
+    const current = rows[index];
+    if (!previous || !current) continue;
+    const pstDelta = current.pst - previous.pst;
+    const timeDelta = current.at.getTime() - previous.at.getTime();
+    if (!(pstDelta > 0) || !(timeDelta > 0)) continue;
+    const age = currentPst - current.pst;
+    const weight = Math.exp((-Math.LN2 * age) / HALF_LIFE_PST);
+    weightedPst += weight * pstDelta;
+    weightedMs += weight * timeDelta;
+  }
+
+  if (!(weightedPst > 0) || !(weightedMs > 0)) return null;
+  const eta = new Date(latestAt.getTime() + (targetPst - currentPst) / (weightedPst / weightedMs));
+  if (!Number.isFinite(eta.getTime()) || eta.getTime() < latestAt.getTime()) return null;
+  return eta;
+}

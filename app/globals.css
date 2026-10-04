@@ -23,6 +23,9 @@ body {
 body {
   font-family: var(--font-sans), "Source Sans 3", sans-serif;
   min-height: 100vh;
+  overflow-x: hidden;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 main {
@@ -125,6 +128,10 @@ footer {
 
 .panel-head {
   display: block;
+}
+
+.panel-head .note {
+  margin: 8px 0 0;
 }
 
 .scope-select {
@@ -330,7 +337,34 @@ footer {
     padding-top: 24px;
   }
 
+  .masthead {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+  }
+
+  h1 {
+    font-size: 1.85rem;
+  }
+
+  .deck {
+    margin-top: 8px;
+    font-size: 0.95rem;
+  }
+
   .chart {
-    height: 240px;
+    height: 280px;
+  }
+
+  .candidate-name {
+    overflow-wrap: break-word;
+  }
+
+  .numbers small {
+    display: none;
+  }
+
+  .more {
+    min-height: 44px;
+    padding: 12px 0;
   }
 }

@@ -40,12 +40,12 @@ async function updateRace(race: RaceConfig): Promise<RaceResult> {
     race.kind === "list"
       ? { ...fetched.payload, candidates: rankedCandidates(fetched.payload.candidates) }
       : fetched.payload;
-  const wrote = await recordSnapshot(key, payload, fetched.etag, {
+  await recordSnapshot(key, payload, fetched.etag, {
     history: race.kind === "chart",
   });
   return {
     race: race.id,
-    status: wrote || race.kind === "list" ? "updated" : "unchanged",
+    status: "updated",
     pst: fetched.payload.pst,
   };
 }

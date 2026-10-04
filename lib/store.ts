@@ -93,11 +93,13 @@ export async function loadSeries(raceKeys: string[]) {
       candidates: row.candidates as Candidate[],
       finalized: row.finalized,
       sourceUpdatedAt: row.sourceUpdatedAt,
+      capturedAt: row.capturedAt,
     })),
     history: history.map((row) => ({
       race: row.race,
       pst: row.pst,
       candidates: row.candidates as Candidate[],
+      capturedAt: row.capturedAt,
     })),
   };
 }

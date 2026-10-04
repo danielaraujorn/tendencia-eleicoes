@@ -11,15 +11,22 @@ export function RankingPanel({
   view,
   title,
   waiting,
+  rosterOnly = false,
 }: {
   view: RaceView | null;
   title: string;
   waiting: string;
+  rosterOnly?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const listed = view?.top ?? [];
-  const showList = Boolean(view?.available && !view.zeroed && listed.length > 0);
+  const sections = view?.available && !rosterOnly ? view.pst : null;
+  const showList = Boolean(view?.available && !rosterOnly && !view.zeroed && listed.length > 0);
   const visible = expanded ? listed : listed.slice(0, PREVIEW);
+  const emptyCopy =
+    view?.available && view.zeroed && !rosterOnly
+      ? "Nenhum voto contabilizado ainda."
+      : waiting;
 
   return (
     <section className="panel ranking">
@@ -27,8 +34,8 @@ export function RankingPanel({
         <p className="kicker">{view?.title ?? title}</p>
       </header>
 
-      {view?.available && view.pst != null ? (
-        <p className="meta sections">{formatPercent(view.pst)} das seções apuradas</p>
+      {sections != null ? (
+        <p className="meta sections">{formatPercent(sections)} das seções apuradas</p>
       ) : null}
 
       {showList ? (
@@ -56,7 +63,7 @@ export function RankingPanel({
           ) : null}
         </>
       ) : (
-        <p className="waiting">{waiting}</p>
+        <p className="waiting">{emptyCopy}</p>
       )}
     </section>
   );

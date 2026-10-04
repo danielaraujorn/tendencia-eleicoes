@@ -26,6 +26,7 @@ export type RaceView = {
   roster: Candidate[];
   points: { pst: number; percents: Record<string, number> }[];
   trends: { id: string; projected: number; marginal: number }[];
+  crossover: { pst: number; at: string; readAt: string } | null;
 };
 
 export type ApuracaoResponse = {
