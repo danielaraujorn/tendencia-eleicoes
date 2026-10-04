@@ -51,25 +51,21 @@ main {
   padding-bottom: 20px;
 }
 
-.masthead-row {
+.progress {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 8px 28px;
-}
-
-.progress {
-  margin: 0;
-  text-align: right;
+  align-items: flex-start;
+  gap: 8px 32px;
+  margin: 22px 0 0;
+  text-align: left;
 }
 
 .progress .pst {
-  font-size: clamp(2.8rem, 7vw, 4.6rem);
+  font-size: clamp(2.1rem, 4vw, 3.15rem);
 }
 
 .progress .pst-local {
-  margin-top: 10px;
+  margin-top: 0;
   font-size: clamp(1.35rem, 2.4vw, 1.8rem);
 }
 
@@ -355,13 +351,15 @@ footer {
     padding-bottom: 12px;
   }
 
-  .masthead-row {
-    flex-direction: column-reverse;
-    align-items: flex-start;
+  .progress {
+    flex-wrap: nowrap;
+    gap: 12px 16px;
+    margin-top: 16px;
   }
 
-  .progress {
-    text-align: left;
+  .progress .pst {
+    flex: 1;
+    min-width: 0;
   }
 
   h1 {

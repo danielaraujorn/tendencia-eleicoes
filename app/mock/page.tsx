@@ -3,7 +3,7 @@ import { Dashboard } from "@/components/dashboard";
 import { MOCK_READ_AT, mockApuracao } from "@/lib/mock-apuracao";
 
 export const metadata: Metadata = {
-  title: "Prévia · 30% apurado",
+  title: "Prévia · 30% no Brasil, 22% no RN",
 };
 
 export default function MockPage() {

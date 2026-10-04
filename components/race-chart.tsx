@@ -241,8 +241,8 @@ export function RaceChart({
                 candidate.number,
               )}
               strokeWidth={3.5}
-              dot={rows.length < 8}
-              activeDot={narrow ? { r: 6 } : undefined}
+              dot={false}
+              activeDot={false}
               connectNulls
               isAnimationActive={false}
             />
@@ -261,6 +261,7 @@ export function RaceChart({
               strokeWidth={1.6}
               strokeDasharray="6 5"
               dot={false}
+              activeDot={false}
               connectNulls
               legendType="none"
               isAnimationActive={false}

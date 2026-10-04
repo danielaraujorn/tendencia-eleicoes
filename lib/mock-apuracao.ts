@@ -4,7 +4,8 @@ import { buildApuracao, type StoredPoint, type StoredState } from "./view";
 
 const FEDERAL = "21270";
 const STATE = "21272";
-const PST = [8, 14, 20, 26, 30] as const;
+const NATIONAL_PST = [8, 14, 20, 26, 30] as const;
+const STATE_PST = [4, 8, 12, 17, 22] as const;
 const READ_AT = [
   "2026-10-04T20:12:00.000Z",
   "2026-10-04T20:28:00.000Z",
@@ -132,8 +133,13 @@ const STATE_DEPUTIES: ListPerson[] = [
   { id: "aline-bentes", number: "10023", name: "Aline Bentes", party: "REPUBLICANOS", percent: 2.2 },
 ];
 
-function chartCandidates(people: ChartPerson[], step: number, scale: number): Candidate[] {
-  const pst = PST[step] ?? 0;
+function chartCandidates(
+  people: ChartPerson[],
+  step: number,
+  scale: number,
+  series: readonly number[],
+): Candidate[] {
+  const pst = series[step] ?? 0;
   const total = pst * scale;
   return people.map((person, index) => {
     const percent = person.shares[step] ?? 0;
@@ -150,30 +156,40 @@ function chartCandidates(people: ChartPerson[], step: number, scale: number): Ca
   });
 }
 
-function chartHistory(config: RaceConfig, people: ChartPerson[], scale: number) {
+function chartHistory(
+  config: RaceConfig,
+  people: ChartPerson[],
+  scale: number,
+  series: readonly number[],
+) {
   const key = `${config.id}:${config.electionCode}`;
-  const history: StoredPoint[] = PST.slice(0, -1).map((pst, step) => ({
+  const history: StoredPoint[] = series.slice(0, -1).map((pst, step) => ({
     race: key,
     pst,
     capturedAt: new Date(READ_AT[step] ?? READ_AT[0]),
-    candidates: chartCandidates(people, step, scale),
+    candidates: chartCandidates(people, step, scale, series),
   }));
-  const last = PST.length - 1;
+  const last = series.length - 1;
   const latest: StoredState = {
     race: key,
-    pst: PST[last] ?? 30,
+    pst: series[last] ?? 0,
     capturedAt: new Date(READ_AT[last] ?? READ_AT[0]),
     finalized: false,
     sourceUpdatedAt: SOURCE_UPDATED_AT,
-    candidates: chartCandidates(people, last, scale),
+    candidates: chartCandidates(people, last, scale, series),
   };
   return { history, latest };
 }
 
-function listState(config: RaceConfig, people: ListPerson[], pool: number): StoredState {
+function listState(
+  config: RaceConfig,
+  people: ListPerson[],
+  pst: number,
+  pool: number,
+): StoredState {
   return {
     race: `${config.id}:${config.electionCode}`,
-    pst: 30,
+    pst,
     capturedAt: new Date(READ_AT[READ_AT.length - 1] ?? READ_AT[0]),
     finalized: false,
     sourceUpdatedAt: SOURCE_UPDATED_AT,
@@ -200,15 +216,26 @@ export const MOCK_READ_AT = READ_AT[READ_AT.length - 1] ?? READ_AT[0];
 
 export function mockApuracao(): ApuracaoResponse {
   const configs = races({ federal: FEDERAL, state: STATE });
-  const president = chartHistory(requireRace(configs, "presidente"), PRESIDENT, 1_200_000);
-  const governor = chartHistory(requireRace(configs, "governador-rn"), GOVERNOR, 24_000);
-  const pool = 30 * 24_000;
+  const president = chartHistory(
+    requireRace(configs, "presidente"),
+    PRESIDENT,
+    1_200_000,
+    NATIONAL_PST,
+  );
+  const governor = chartHistory(
+    requireRace(configs, "governador-rn"),
+    GOVERNOR,
+    24_000,
+    STATE_PST,
+  );
+  const statePst = STATE_PST[STATE_PST.length - 1] ?? 0;
+  const pool = statePst * 24_000;
   const states: StoredState[] = [
     president.latest,
     governor.latest,
-    listState(requireRace(configs, "senador-rn"), SENATORS, pool),
-    listState(requireRace(configs, "deputado-federal-rn"), FEDERAL_DEPUTIES, pool),
-    listState(requireRace(configs, "deputado-estadual-rn"), STATE_DEPUTIES, pool),
+    listState(requireRace(configs, "senador-rn"), SENATORS, statePst, pool),
+    listState(requireRace(configs, "deputado-federal-rn"), FEDERAL_DEPUTIES, statePst, pool),
+    listState(requireRace(configs, "deputado-estadual-rn"), STATE_DEPUTIES, statePst, pool),
   ];
   const history = [...president.history, ...governor.history];
   return buildApuracao(configs, states, history, "oficial");

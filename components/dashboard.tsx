@@ -240,54 +240,47 @@ export function Dashboard({
     <main>
       {preview ? (
         <p className="preview-banner">
-          Prévia ilustrativa com nomes fictícios e 30% das
-          seções apuradas.
+          Prévia ilustrativa com nomes fictícios. 30% das
+          seções apuradas no Brasil e 22% no Rio Grande do
+          Norte.
         </p>
       ) : null}
       <header className="masthead">
-        <div className="masthead-row">
-          <div>
-            <p className="kicker">
-              Eleições 2026 · 1º turno
-            </p>
-            <h1>Tendência da apuração</h1>
-          </div>
-          {nationalPst != null || statePst != null ? (
-            <div className="progress">
-              {nationalPst != null ? (
-                <p className="pst">
-                  {formatPercent(nationalPst)}
-                  <span style={{ marginTop: "4px" }}>
-                    {sharedPst
-                      ? "das seções apuradas"
-                      : "das seções apuradas no Brasil"}
-                  </span>
-                </p>
-              ) : null}
-              {statePst != null && !sharedPst ? (
-                <p
-                  className={
-                    nationalPst == null
-                      ? "pst"
-                      : "pst pst-local"
-                  }
-                >
-                  {formatPercent(statePst)}
-                  <span>
-                    {nationalPst == null
-                      ? `das seções apuradas em ${stateLabel}`
-                      : `em ${stateLabel}`}
-                  </span>
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
+        <p className="kicker">Eleições 2026 · 1º turno</p>
+        <h1>Tendência da apuração</h1>
         <p className="deck">
           O percentual de cada candidatura conforme as
           seções vão sendo totalizadas. A página se atualiza
           sozinha.
         </p>
+        {nationalPst != null || statePst != null ? (
+          <div className="progress">
+            {nationalPst != null ? (
+              <p className="pst">
+                {formatPercent(nationalPst)}
+                <span>
+                  {sharedPst
+                    ? "das seções apuradas"
+                    : "das seções apuradas no Brasil"}
+                </span>
+              </p>
+            ) : null}
+            {statePst != null && !sharedPst ? (
+              <p
+                className={
+                  nationalPst == null ? "pst" : "pst pst-local"
+                }
+              >
+                {formatPercent(statePst)}
+                <span>
+                  {nationalPst == null
+                    ? `das seções apuradas em ${stateLabel}`
+                    : `em ${stateLabel}`}
+                </span>
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         <div className="state-bar">
           <label className="kicker" htmlFor="estado">
             Estado
