@@ -1,31 +1,71 @@
 "use client";
 
+import { useState } from "react";
 import { CandidateName } from "@/components/candidate-name";
 import { colorFor } from "@/lib/colors";
 import { formatPercent, formatVotes } from "@/lib/format";
 import type { RaceView } from "@/lib/types";
 import { chartRows, RaceChart } from "./race-chart";
 
+const LIST_PREVIEW = 2;
+const LIST_EXPANDED = 6;
+
 export function RacePanel({
   view,
   waiting,
   rosterOnly = false,
+  scopeToggle,
 }: {
   view: RaceView | null;
   waiting: string;
   rosterOnly?: boolean;
+  scopeToggle?: {
+    value: "br" | "uf";
+    stateLabel: string;
+    onChange: (value: "br" | "uf") => void;
+  };
 }) {
+  const [expanded, setExpanded] = useState(false);
   const rows = view ? chartRows(view) : [];
-  const listed = rosterOnly
+  const pool = rosterOnly
     ? (view?.roster ?? [])
     : (view?.top ?? []);
-  const ids = listed.map((candidate) => candidate.id);
+  const countable = Boolean(
+    view?.available && !rosterOnly && !view.zeroed,
+  );
+  const listed = countable
+    ? pool.slice(0, expanded ? LIST_EXPANDED : LIST_PREVIEW)
+    : pool;
+  const ids = pool.map((candidate) => candidate.id);
 
   return (
     <section className="panel">
       <header className="panel-head">
         <p className="kicker">{view?.title ?? "Disputa"}</p>
-        <h2>{view?.scope ?? "—"}</h2>
+        {scopeToggle ? (
+          <div
+            className="choice-toggle"
+            role="group"
+            aria-label="Apuração de presidente"
+          >
+            <button
+              type="button"
+              aria-pressed={scopeToggle.value === "br"}
+              onClick={() => scopeToggle.onChange("br")}
+            >
+              Geral
+            </button>
+            <button
+              type="button"
+              aria-pressed={scopeToggle.value === "uf"}
+              onClick={() => scopeToggle.onChange("uf")}
+            >
+              Estadual
+            </button>
+          </div>
+        ) : (
+          <h2>{view?.scope ?? "—"}</h2>
+        )}
       </header>
 
       {!view?.available ? (
@@ -110,6 +150,15 @@ export function RacePanel({
                 ))
               : null}
           </ul>
+          {countable && pool.length > LIST_PREVIEW ? (
+            <button
+              type="button"
+              className="more"
+              onClick={() => setExpanded((open) => !open)}
+            >
+              {expanded ? "Mostrar menos" : "Mostrar mais"}
+            </button>
+          ) : null}
         </div>
       ) : (
         <div />

@@ -1,7 +1,13 @@
 import type { RaceConfig } from "./races";
 import { storageKey } from "./races";
 import { arrivalAt, crossoverPst, projectPercent } from "./trend";
-import type { ApuracaoResponse, Candidate, RaceView } from "./types";
+import type {
+  ApuracaoResponse,
+  Candidate,
+  RaceView,
+  RegionView,
+  RoundView,
+} from "./types";
 
 export type StoredPoint = {
   race: string;
@@ -16,10 +22,10 @@ export type StoredState = StoredPoint & {
 };
 
 const CHART_SIZE = 5;
+const CHART_LIST_SIZE = 6;
 const CHART_MIN_PST = 1;
 const CROSSOVER_MIN_PST = 20;
 const ZEROED_LIST = 10;
-export const LIST_SIZE = 20;
 
 export function isZeroed(candidates: Candidate[]) {
   return (
@@ -34,11 +40,33 @@ export function topCandidates(candidates: Candidate[], count = CHART_SIZE) {
     .slice(0, count);
 }
 
-export function rankedCandidates(candidates: Candidate[], count = LIST_SIZE) {
-  return topCandidates(
-    candidates.filter((candidate) => candidate.destination === "Válido"),
-    count,
-  );
+export function candidatesToStore(candidates: Candidate[], seats: number) {
+  const valid = candidates.filter((candidate) => candidate.destination === "Válido");
+  const ranked = topCandidates(valid, Math.max(seats, 0));
+  const ids = new Set(ranked.map((candidate) => candidate.id));
+  const extra = valid.filter((candidate) => candidate.elected && !ids.has(candidate.id));
+  return topCandidates([...ranked, ...extra], ranked.length + extra.length);
+}
+
+export function visibleListCandidates(candidates: Candidate[]) {
+  const valid = candidates.filter((candidate) => candidate.destination === "Válido");
+  const elected = valid.filter((candidate) => candidate.elected);
+  const source = elected.length > 0 ? elected : valid;
+  return topCandidates(source, source.length);
+}
+
+export type Runoff = "yes" | "no" | "unknown";
+
+export function governorRunoff(
+  view: Pick<RaceView, "available" | "finalized" | "roster"> | null | undefined,
+): Runoff {
+  if (!view?.available || !view.finalized) return "unknown";
+  const leader = topCandidates(
+    view.roster.filter((candidate) => candidate.destination === "Válido"),
+    1,
+  )[0];
+  if (!leader) return "unknown";
+  return leader.percent < 50 ? "yes" : "no";
 }
 
 export function rosterCandidates(candidates: Candidate[]) {
@@ -59,7 +87,7 @@ function listRaceView(
   latest: StoredState | null,
   zeroed: boolean,
 ): RaceView {
-  const top = current ? rankedCandidates(current.candidates) : [];
+  const top = current ? visibleListCandidates(current.candidates) : [];
   const leader = top[0] ?? null;
   const runnerUp = top[1] ?? null;
 
@@ -108,7 +136,7 @@ export function buildRaceView(
   const ranked = current
     ? topCandidates(current.candidates, current.candidates.length)
     : [];
-  const top = zeroed ? ranked.slice(0, ZEROED_LIST) : ranked.slice(0, CHART_SIZE);
+  const top = zeroed ? ranked.slice(0, ZEROED_LIST) : ranked.slice(0, CHART_LIST_SIZE);
   const others: Candidate[] = [];
   const roster = current ? rosterCandidates(current.candidates) : [];
   const series = chartPoints(history, latest);
@@ -210,12 +238,12 @@ function leadCrossover(
   return { pst, at: eta.toISOString(), readAt: latestAt.toISOString() };
 }
 
-export function buildApuracao(
+function roundApuracao(
   configs: RaceConfig[],
   states: StoredState[],
   history: StoredPoint[],
-  source: ApuracaoResponse["source"],
-): ApuracaoResponse {
+  regions: RegionView[],
+): RoundView {
   const races = Object.fromEntries(
     configs.map((config) => {
       const key = storageKey(config);
@@ -229,8 +257,32 @@ export function buildApuracao(
       ];
     }),
   );
+  return { races, regions };
+}
 
-  return { source, capturedAt: latestCapturedAt(states), races };
+export function buildApuracao(
+  rounds: {
+    first: RaceConfig[];
+    second?: RaceConfig[];
+    regions?: Partial<Record<"1" | "2", RegionView[]>>;
+  },
+  states: StoredState[],
+  history: StoredPoint[],
+  source: ApuracaoResponse["source"],
+): ApuracaoResponse {
+  return {
+    source,
+    capturedAt: latestCapturedAt(states),
+    rounds: {
+      "1": roundApuracao(rounds.first, states, history, rounds.regions?.["1"] ?? []),
+      "2": roundApuracao(
+        rounds.second ?? [],
+        states,
+        history,
+        rounds.regions?.["2"] ?? [],
+      ),
+    },
+  };
 }
 
 function latestCapturedAt(states: StoredState[]) {

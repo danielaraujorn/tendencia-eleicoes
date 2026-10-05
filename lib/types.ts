@@ -7,6 +7,7 @@ export type Candidate = {
   percent: number;
   seq: number;
   destination: string;
+  elected?: boolean;
 };
 
 export type RaceView = {
@@ -29,8 +30,19 @@ export type RaceView = {
   crossover: { pst: number; at: string; readAt: string } | null;
 };
 
+export type RegionView = {
+  id: string;
+  label: string;
+  pst: number | null;
+};
+
+export type RoundView = {
+  races: Record<string, RaceView>;
+  regions: RegionView[];
+};
+
 export type ApuracaoResponse = {
   source: "oficial" | "simulado";
   capturedAt: string | null;
-  races: Record<string, RaceView>;
+  rounds: Record<"1" | "2", RoundView>;
 };

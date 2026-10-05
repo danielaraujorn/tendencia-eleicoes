@@ -1,4 +1,4 @@
-import type { ListOfficeId, StateId } from "./labels";
+import { isStateId, type ListOfficeId, type StateId } from "./labels";
 
 /** Bancada federal de 2026, igual à de 2022. O STF manteve as 513 cadeiras. */
 const FEDERAL_SEATS: Record<StateId, number> = {
@@ -53,4 +53,17 @@ export function seatsFor(office: ListOfficeId, state: StateId) {
 
 export function seatsLabel(count: number) {
   return count === 1 ? "1 vaga" : `${count} vagas`;
+}
+
+export function seatsForList(id: string, abrangencia: string) {
+  if (!isStateId(abrangencia)) return null;
+  const office = id.slice(0, -(abrangencia.length + 1));
+  if (
+    office === "senador" ||
+    office === "deputado-federal" ||
+    office === "deputado-estadual"
+  ) {
+    return seatsFor(office, abrangencia);
+  }
+  return null;
 }

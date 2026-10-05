@@ -5,10 +5,24 @@ import { formatArrival } from "../lib/format";
 import { shouldRecordHistory } from "../lib/history";
 import { arrivalAt, crossoverPst, projectPercent } from "../lib/trend";
 import { parseTsePayload } from "../lib/tse";
-import { buildApuracao, buildRaceView, rosterCandidates, topCandidates } from "../lib/view";
+import {
+  buildApuracao,
+  buildRaceView,
+  candidatesToStore,
+  governorRunoff,
+  rosterCandidates,
+  topCandidates,
+} from "../lib/view";
+import { regionProgress } from "../lib/regions";
 import type { Candidate } from "../lib/types";
 import { STATE_OPTIONS } from "../lib/labels";
-import { pickElections, races, type EleConfig, type RaceConfig } from "../lib/races";
+import {
+  ELECTION_ROUNDS,
+  configuredRound,
+  raceUrl,
+  races,
+  type RaceConfig,
+} from "../lib/races";
 
 const president: RaceConfig = {
   id: "presidente",
@@ -55,6 +69,7 @@ test("interpreta percentual com vírgula e achata os candidatos", () => {
                     pvapn: "40,123456789",
                     seq: "1",
                     dvt: "Válido",
+                    e: "s",
                   },
                 ],
               },
@@ -90,11 +105,13 @@ test("interpreta percentual com vírgula e achata os candidatos", () => {
   assert.equal(parsed.candidates.length, 2);
   assert.equal(parsed.candidates.find((item) => item.id === "1")?.percent, 40.123456789);
   assert.equal(parsed.candidates.find((item) => item.id === "1")?.party, "PT");
+  assert.equal(parsed.candidates.find((item) => item.id === "1")?.elected, true);
+  assert.equal(parsed.candidates.find((item) => item.id === "2")?.elected, false);
 });
 
 test("a resposta traz a captura mais recente", () => {
   const response = buildApuracao(
-    [president],
+    { first: [president] },
     [
       {
         race: "presidente:21270",
@@ -143,21 +160,22 @@ test("a reta só aparece com histórico e apuração acima de 5%", () => {
     null,
   );
 
-  // 40, 42 e 44 em 10, 20 e 30. A reta em 100% é 58.
-  assert.equal(
-    projectPercent([
-      { pst: 10, percent: 40 },
-      { pst: 20, percent: 42 },
-      { pst: 30, percent: 44 },
-    ]),
-    58,
+  // 40, 42 e 44 em 10, 20 e 30. Inclinação 0,2. Em 100% a tendência amortecida é 48,2.
+  assert.ok(
+    Math.abs(
+      (projectPercent([
+        { pst: 10, percent: 40 },
+        { pst: 20, percent: 42 },
+        { pst: 30, percent: 44 },
+      ]) ?? 0) - 48.2,
+    ) < 1e-9,
   );
 
   const turned = [
     ...Array.from({ length: 31 }, (_, index) => ({ pst: 10 + index, percent: 40 })),
     ...Array.from({ length: 10 }, (_, index) => ({ pst: 41 + index, percent: 41 + index })),
   ];
-  assert.ok(Math.abs((projectPercent(turned) ?? 0) - 100) < 1e-9);
+  assert.ok(Math.abs((projectPercent(turned) ?? 0) - 75) < 1e-9);
 
   // Salto de 47,3 para 64,8 deixa a janela de 10 pontos com uma leitura só.
   // A reta segue a queda recente (50,41 → 49,58), não a série desde o início.
@@ -255,9 +273,9 @@ test("lista os cinco mais votados e plota os dois primeiros", () => {
     topCandidates(candidates).map((item) => item.percent),
     [6, 5, 4, 3, 2],
   );
-  assert.equal(view.top.length, 5);
+  assert.equal(view.top.length, 6);
   assert.deepEqual(view.others, []);
-  assert.deepEqual(Object.keys(view.points[0]?.percents ?? {}), ["0", "1", "2", "3", "4"]);
+  assert.deepEqual(Object.keys(view.points[0]?.percents ?? {}), ["0", "1", "2", "3", "4", "5"]);
   assert.deepEqual(
     Object.keys(chartRows(view)[0] ?? {}).sort(),
     ["0", "0__trend", "1", "1__trend", "pst"],
@@ -442,7 +460,7 @@ test("o tooltip da projeção usa a curva tracejada quando a série sólida est�
   assert.equal(tooltipItems([{ dataKey: "0__trend", value: null }]).length, 0);
 });
 
-test("projeta a reta a partir do percentual acumulado", () => {
+test("projeta a tendência amortecida a partir do percentual acumulado", () => {
   const snapshots = [
     { pst: 10, votes: [240, 360], percents: [40, 60] },
     { pst: 20, votes: [315, 435], percents: [42, 58] },
@@ -469,14 +487,14 @@ test("projeta a reta a partir do percentual acumulado", () => {
   });
   const trend = view.trends.find((item) => item.id === "0");
   assert.ok(trend);
-  assert.ok(Math.abs(trend.projected - 58) < 1e-9);
+  assert.ok(Math.abs(trend.projected - 48.2) < 1e-9);
 
   const rows = chartRows(view);
   const end = rows[rows.length - 1];
   assert.ok(end);
   assert.equal(end.pst, 100);
   assert.equal(end["0"], null);
-  assert.ok(Math.abs(Number(end["0__trend"]) - 58) < 1e-9);
+  assert.ok(Math.abs(Number(end["0__trend"]) - 48.2) < 1e-9);
   assert.equal(view.crossover, null);
 });
 
@@ -593,51 +611,15 @@ test("esconde a troca até 20% das seções", () => {
   );
 });
 
-const eleConfig: EleConfig = {
-  pl: [
-    {
-      e: [
-        {
-          cd: "6278",
-          cdt2: "",
-          nm: "Eleição Suplementar - Roraima",
-          t: "1",
-          tp: "2",
-          abr: [{ cp: [{ cd: "3" }] }],
-        },
-        {
-          cd: "6257",
-          cdt2: "6258",
-          nm: "Eleição Ordinária Federal - 2026 1º Turno",
-          t: "1",
-          tp: "8",
-          abr: [{ cp: [{ cd: "1" }] }],
-        },
-        {
-          cd: "6259",
-          cdt2: "6260",
-          nm: "Eleição Ordinária Estadual - 2026 1º Turno",
-          t: "1",
-          tp: "1",
-          abr: [{ cp: [{ cd: "3" }, { cd: "5" }, { cd: "6" }] }],
-        },
-        {
-          cd: "6261",
-          cdt2: "",
-          nm: "Eleição Ordinária Municipal - 2026 1º Turno",
-          t: "1",
-          tp: "3",
-          abr: [{ cp: [{ cd: "25" }] }],
-        },
-      ],
-    },
-  ],
-};
-
 test("emite senador e deputados de cada estado na eleição estadual", () => {
   const configs = races({ federal: "6257", state: "6259" });
   assert.equal(STATE_OPTIONS.length, 27);
-  assert.equal(configs.filter((race) => race.kind === "chart").length, 28);
+  assert.equal(configs.filter((race) => race.kind === "chart").length, 55);
+  const presidentState = configs.find((race) => race.id === "presidente-sp");
+  assert.ok(presidentState);
+  assert.equal(presidentState.cargo, "0001");
+  assert.equal(presidentState.abrangencia, "sp");
+  assert.equal(presidentState.electionCode, "6257");
   const lists = configs.filter((race) => race.kind === "list");
   assert.equal(lists.length, 81);
   for (const state of STATE_OPTIONS) {
@@ -665,7 +647,7 @@ test("emite senador e deputados de cada estado na eleição estadual", () => {
   }
 });
 
-test("a lista guarda só os vinte válidos e não monta série", () => {
+test("a lista guarda as vagas, inclui eleito fora do corte e não monta série", () => {
   const senator: RaceConfig = {
     id: "senador-rn",
     title: "Senador",
@@ -712,10 +694,26 @@ test("a lista guarda só os vinte válidos e não monta série", () => {
     latest,
   );
 
-  assert.equal(view.top.length, 20);
+  assert.equal(view.top.length, 25);
   assert.deepEqual(
     view.top.map((item) => item.id),
-    Array.from({ length: 20 }, (_, index) => String(24 - index)),
+    Array.from({ length: 25 }, (_, index) => String(24 - index)),
+  );
+  const stored = candidatesToStore(
+    candidates.map((item) => (item.id === "0" ? { ...item, elected: true } : item)),
+    8,
+  );
+  assert.equal(stored.length, 9);
+  assert.ok(stored.some((item) => item.id === "0"));
+  assert.equal(stored[0]?.id, "24");
+  const electedView = buildRaceView(
+    senator,
+    [],
+    { ...latest, candidates: stored },
+  );
+  assert.deepEqual(
+    electedView.top.map((item) => item.id),
+    ["0"],
   );
   assert.deepEqual(view.others, []);
   assert.ok(view.top.every((item) => item.destination === "Válido"));
@@ -725,15 +723,79 @@ test("a lista guarda só os vinte válidos e não monta série", () => {
   assert.equal(view.crossover, null);
 });
 
-test("escolhe a ordinária federal e estadual e ignora a suplementar", () => {
-  assert.deepEqual(pickElections(eleConfig, 1), {
-    federal: "6257",
-    state: "6259",
+test("os códigos e a página ficam no 2º turno oficial", () => {
+  assert.equal(configuredRound(), 2);
+  assert.deepEqual(ELECTION_ROUNDS, {
+    first: { federal: "6257", state: "6259" },
+    second: { federal: "6258", state: "6260" },
   });
-  assert.deepEqual(pickElections(eleConfig, 2), {
-    federal: "6258",
-    state: "6260",
+  const president = races(ELECTION_ROUNDS.second).find(
+    (race) => race.id === "presidente",
+  );
+  assert.ok(president);
+  assert.equal(
+    raceUrl(president),
+    "https://resultados.tse.jus.br/oficial/ele2026/6258/dados/br/br-c0001-e006258-u.json",
+  );
+});
+
+test("o segundo turno não pede lista nem governador fora da disputa", () => {
+  const configs = races(
+    { federal: "6258", state: "6260" },
+    { includeLists: false, governors: ["sp", "mg"] },
+  );
+  assert.equal(configs.filter((race) => race.kind === "list").length, 0);
+  assert.ok(configs.some((race) => race.id === "presidente"));
+  assert.ok(configs.some((race) => race.id === "presidente-rn"));
+  assert.ok(configs.some((race) => race.id === "governador-sp"));
+  assert.equal(configs.some((race) => race.id === "governador-rn"), false);
+});
+
+test("o segundo turno de governador depende da maioria no primeiro", () => {
+  const roster = [
+    candidate({ id: "a", percent: 54, destination: "Válido" }),
+    candidate({ id: "b", percent: 46, destination: "Válido" }),
+  ];
+  assert.equal(
+    governorRunoff({ available: true, finalized: true, roster }),
+    "no",
+  );
+  assert.equal(
+    governorRunoff({
+      available: true,
+      finalized: true,
+      roster: roster.map((item) =>
+        item.id === "a" ? { ...item, percent: 49.9 } : item,
+      ),
+    }),
+    "yes",
+  );
+  assert.equal(
+    governorRunoff({ available: true, finalized: false, roster }),
+    "unknown",
+  );
+  assert.equal(governorRunoff(null), "unknown");
+});
+
+test("a região soma seções, não a média dos estados", () => {
+  const section = (cdabr: string, counted: number, total: number) => ({
+    tpabr: "uf",
+    cdabr,
+    s: { st: String(counted), ts: String(total) },
   });
+  const progress = regionProgress({
+    abr: [
+      section("sp", 100, 1000),
+      section("rj", 50, 100),
+      section("mg", 0, 100),
+      section("es", 25, 100),
+      section("br", 1, 1),
+    ],
+  });
+  const southeast = progress.find((region) => region.id === "sudeste");
+  assert.ok(southeast);
+  assert.ok(Math.abs((southeast.pst ?? 0) - (175 / 1300) * 100) < 1e-9);
+  assert.equal(progress.find((region) => region.id === "sul")?.pst, null);
 });
 
 type TseResultFile = {

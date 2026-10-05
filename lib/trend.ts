@@ -6,7 +6,7 @@ const WINDOW_PST = 10;
 
 export type PercentPoint = { pst: number; percent: number };
 
-function fitLine(rows: PercentPoint[]) {
+function fitSlope(rows: PercentPoint[]) {
   let sumX = 0;
   let sumY = 0;
   let sumXY = 0;
@@ -21,8 +21,12 @@ function fitLine(rows: PercentPoint[]) {
   const denom = n * sumX2 - sumX * sumX;
   if (!(Math.abs(denom) > 1e-9)) return null;
   const slope = (n * sumXY - sumX * sumY) / denom;
-  const intercept = (sumY - slope * sumX) / n;
-  const projected = slope * 100 + intercept;
+  if (!Number.isFinite(slope)) return null;
+  return slope;
+}
+
+function dampToFinish(last: PercentPoint, slope: number) {
+  const projected = last.percent + ((last.pst * (100 - last.pst)) / 100) * slope;
   if (!Number.isFinite(projected)) return null;
   return projected;
 }
@@ -38,7 +42,11 @@ export function projectPercent(points: PercentPoint[]) {
   // Um salto maior que a janela (a apuração nacional) deixa uma leitura só.
   // As últimas leituras seguem a direção recente; a série inteira puxa o começo da noite.
   const sample = window.length >= MIN_POINTS ? window : rows.slice(-MIN_POINTS);
-  return fitLine(sample);
+  const slope = fitSlope(sample);
+  if (slope === null) return null;
+  // A inclinação recente descreve a mistura das seções que faltam.
+  // Esticar a mesma reta até 100% exagera o movimento no começo da noite.
+  return dampToFinish(last, slope);
 }
 
 export function crossoverPst(

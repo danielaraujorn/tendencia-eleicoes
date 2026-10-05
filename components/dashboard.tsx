@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { RacePanel } from "@/components/race-panel";
 import { RankingPanel } from "@/components/ranking-panel";
+import { RegionsPanel } from "@/components/regions-panel";
 import { formatPercent } from "@/lib/format";
 import {
   LIST_OFFICES,
@@ -10,6 +11,7 @@ import {
   STATE_COOKIE,
   STATE_OPTIONS,
   isStateId,
+  presidentStateId,
   stateRaceId,
   type StateId,
 } from "@/lib/labels";
@@ -25,6 +27,7 @@ import type {
   ApuracaoResponse,
   RaceView,
 } from "@/lib/types";
+import { governorRunoff } from "@/lib/view";
 
 function waitingCopy(
   source: ApuracaoResponse["source"] | null,
@@ -113,10 +116,12 @@ export function Dashboard({
   initialState,
   initialPhase,
   preview,
+  round = 1,
 }: {
   initialState: StateId;
   initialPhase: PollPhase;
-  preview?: { data: ApuracaoResponse; readAt: string };
+  round?: 1 | 2;
+  preview?: { data: ApuracaoResponse; readAt: string; note: string };
 }) {
   const [data, setData] = useState<ApuracaoResponse | null>(
     preview?.data ?? null,
@@ -129,7 +134,7 @@ export function Dashboard({
     useState<PollPhase>(initialPhase);
   const [stateId, setStateId] =
     useState<StateId>(initialState);
-  const [rankingsExpanded, setRankingsExpanded] = useState(false);
+  const [presidentScope, setPresidentScope] = useState<"br" | "uf">("br");
 
   useEffect(() => {
     if (preview) return;
@@ -209,46 +214,58 @@ export function Dashboard({
     : null;
   const pageClock = fetchedAt ? clockInBrasilia(fetchedAt) : null;
   const rosterOnly = phase === "before";
-  const nationalPst = countedPercent(
-    data?.races[PRESIDENT_ID],
-    rosterOnly,
-  );
+  const roundKey = round === 1 ? "1" : "2";
+  const roundRaces = data?.rounds[roundKey].races;
+  const firstRaces = data?.rounds["1"].races;
   const stateLabel =
     STATE_OPTIONS.find((option) => option.id === stateId)
       ?.label ?? "";
+  const firstGovernor =
+    firstRaces?.[stateRaceId("governador", stateId)] ?? null;
+  const runoff = governorRunoff(firstGovernor);
+  const dualPresident = round === 2 && runoff === "no";
+  const nationalView = roundRaces?.[PRESIDENT_ID] ?? null;
+  const statePresident =
+    roundRaces?.[presidentStateId(stateId)] ?? null;
+  const presidentView =
+    !dualPresident && presidentScope === "uf" ? statePresident : nationalView;
+  const nationalPst = countedPercent(nationalView, rosterOnly);
   const statePst = countedPercent(
-    data?.races[stateRaceId("governador", stateId)] ??
-      LIST_OFFICES.map(
-        (office) =>
-          data?.races[stateRaceId(office.id, stateId)],
-      ).find(
-        (view) => countedPercent(view, rosterOnly) != null,
-      ),
+    dualPresident
+      ? statePresident
+      : round === 1
+        ? (roundRaces?.[stateRaceId("governador", stateId)] ??
+          LIST_OFFICES.map(
+            (office) => roundRaces?.[stateRaceId(office.id, stateId)],
+          ).find((view) => countedPercent(view, rosterOnly) != null))
+        : roundRaces?.[stateRaceId("governador", stateId)],
     rosterOnly,
   );
   const sharedPst = samePercent(nationalPst, statePst);
   const reading = rosterOnly
     ? null
     : latestSourceReading([
-        data?.races[PRESIDENT_ID],
-        data?.races[stateRaceId("governador", stateId)],
-        ...LIST_OFFICES.map(
-          (office) =>
-            data?.races[stateRaceId(office.id, stateId)],
-        ),
+        nationalView,
+        dualPresident
+          ? statePresident
+          : roundRaces?.[stateRaceId("governador", stateId)],
+        ...(round === 1
+          ? LIST_OFFICES.map(
+              (office) => roundRaces?.[stateRaceId(office.id, stateId)],
+            )
+          : []),
       ]);
 
   return (
     <main>
       {preview ? (
-        <p className="preview-banner">
-          Prévia ilustrativa com nomes fictícios. 30% das
-          seções apuradas no Brasil e 22% no Rio Grande do
-          Norte.
-        </p>
+        <p className="preview-banner">{preview.note}</p>
       ) : null}
       <header className="masthead">
-        <p className="kicker">Eleições 2026 · 1º turno</p>
+        <div className="masthead-copy">
+        <p className="kicker">
+          {round === 2 ? "Eleições 2026 · 2º turno" : "Eleições 2026"}
+        </p>
         <h1>Tendência da apuração</h1>
         <p className="deck">
           O percentual de cada candidatura conforme as
@@ -269,9 +286,7 @@ export function Dashboard({
             ) : null}
             {statePst != null && !sharedPst ? (
               <p
-                className={
-                  nationalPst == null ? "pst" : "pst pst-local"
-                }
+                className="pst"
               >
                 {formatPercent(statePst)}
                 <span>
@@ -321,46 +336,71 @@ export function Dashboard({
           {reading ? ` · Leitura do TSE: ${reading}` : ""}
           {error ? ` · ${error}` : ""}
         </p>
+        </div>
+        <RegionsPanel regions={data?.rounds[roundKey]?.regions ?? []} />
       </header>
 
       <div className="races">
         <RacePanel
-          view={data?.races[PRESIDENT_ID] ?? null}
+          key={dualPresident ? "presidente-br" : `presidente-${presidentScope}`}
+          view={dualPresident ? nationalView : presidentView}
           waiting={waiting}
-          rosterOnly={phase === "before"}
-        />
-
-        <RacePanel
-          view={
-            data?.races[
-              stateRaceId("governador", stateId)
-            ] ?? null
+          rosterOnly={rosterOnly}
+          scopeToggle={
+            dualPresident
+              ? undefined
+              : {
+                  value: presidentScope,
+                  stateLabel,
+                  onChange: setPresidentScope,
+                }
           }
-          waiting={waiting}
-          rosterOnly={phase === "before"}
         />
-      </div>
-
-      <div className="rankings">
-        {LIST_OFFICES.map((office) => (
-          <RankingPanel
-            key={office.id}
-            title={officeHeading(office, stateId)}
+        {dualPresident ? (
+          <RacePanel
+            key={`presidente-${stateId}`}
+            view={statePresident}
+            waiting={waiting}
+            rosterOnly={rosterOnly}
+          />
+        ) : round === 2 && runoff === "unknown" ? (
+          <section className="panel">
+            <header className="panel-head">
+              <p className="kicker">Governador</p>
+              <h2>{stateLabel}</h2>
+            </header>
+            <p className="waiting">
+              O segundo turno em {stateLabel} ainda não está definido.
+            </p>
+          </section>
+        ) : (
+          <RacePanel
+            key={`governador-${stateId}-${round}`}
             view={
-              data?.races[
-                stateRaceId(office.id, stateId)
-              ] ?? null
+              roundRaces?.[stateRaceId("governador", stateId)] ?? null
             }
             waiting={waiting}
-            rosterOnly={phase === "before"}
-            seats={seatsFor(office.id, stateId)}
-            expanded={rankingsExpanded}
-            onToggle={() =>
-              setRankingsExpanded((open) => !open)
-            }
+            rosterOnly={rosterOnly}
           />
-        ))}
+        )}
       </div>
+
+      {round === 1 ? (
+        <div className="rankings">
+          {LIST_OFFICES.map((office) => (
+            <RankingPanel
+              key={office.id}
+              title={officeHeading(office, stateId)}
+              view={
+                roundRaces?.[stateRaceId(office.id, stateId)] ?? null
+              }
+              waiting={waiting}
+              rosterOnly={rosterOnly}
+              seats={seatsFor(office.id, stateId)}
+            />
+          ))}
+        </div>
+      ) : null}
 
       <footer>
         Fonte: arquivos oficiais de divulgação do TSE. A

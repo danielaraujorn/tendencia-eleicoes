@@ -18,6 +18,7 @@ type TseCandidate = {
   pvapn?: string;
   seq?: string;
   dvt?: string;
+  e?: string;
 };
 
 type TseFile = {
@@ -74,6 +75,7 @@ export function parseTsePayload(data: TseFile): ParsedRace {
             percent,
             seq: parseTseNumber(candidate.seq ?? "0") || 0,
             destination: candidate.dvt ?? "",
+            elected: (candidate.e ?? "").trim().toLowerCase() === "s",
           });
         }
       }

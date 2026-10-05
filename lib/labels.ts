@@ -64,3 +64,39 @@ export function stateRaceId(
 ) {
   return `${office}-${state}`;
 }
+
+export function presidentStateId(state: StateId) {
+  return `presidente-${state}`;
+}
+
+export const REGIONS = [
+  {
+    id: "norte",
+    label: "Norte",
+    states: ["ac", "ap", "am", "pa", "ro", "rr", "to"],
+  },
+  {
+    id: "nordeste",
+    label: "Nordeste",
+    states: ["al", "ba", "ce", "ma", "pb", "pe", "pi", "rn", "se"],
+  },
+  {
+    id: "centro-oeste",
+    label: "Centro-Oeste",
+    states: ["df", "go", "mt", "ms"],
+  },
+  {
+    id: "sudeste",
+    label: "Sudeste",
+    states: ["es", "mg", "rj", "sp"],
+  },
+  {
+    id: "sul",
+    label: "Sul",
+    states: ["pr", "rs", "sc"],
+  },
+] as const satisfies readonly {
+  id: string;
+  label: string;
+  states: readonly StateId[];
+}[];
