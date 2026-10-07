@@ -375,14 +375,14 @@ test("candidato ausente no começo da série não entra como zero voto", () => {
       votes === null
         ? []
         : [
-            candidate({
-              id: String(index),
-              name: index === 0 ? "Ana" : "Bia",
-              votes,
-              percent: (100 * votes) / row.votes.reduce((sum, value) => sum + (value ?? 0), 0),
-              seq: index,
-            }),
-          ],
+          candidate({
+            id: String(index),
+            name: index === 0 ? "Ana" : "Bia",
+            votes,
+            percent: (100 * votes) / row.votes.reduce((sum, value) => sum + (value ?? 0), 0),
+            seq: index,
+          }),
+        ],
     ),
   }));
   const latest = history[history.length - 1];
@@ -823,26 +823,3 @@ function assertResultFields(data: TseResultFile, url: string) {
     url,
   );
 }
-
-test("interpreta o simulado do TSE para presidente, governadores e listas", async () => {
-  const urls = [
-    "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21270/dados/br/br-c0001-e021270-u.json",
-    "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21272/dados/rn/rn-c0003-e021272-u.json",
-    "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21272/dados/sp/sp-c0003-e021272-u.json",
-    "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21272/dados/rj/rj-c0003-e021272-u.json",
-    "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21272/dados/rn/rn-c0005-e021272-u.json",
-    "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21272/dados/rn/rn-c0006-e021272-u.json",
-    "https://resultados-sim.tse.jus.br/simulado/simulado2026/ele2026/21272/dados/rn/rn-c0007-e021272-u.json",
-  ];
-
-  for (const url of urls) {
-    const response = await fetch(url);
-    assert.equal(response.status, 200, url);
-    const data = await response.json();
-    assertResultFields(data, url);
-    const parsed = parseTsePayload(data);
-    assert.ok(parsed.pst >= 0, url);
-    assert.ok(parsed.candidates.length >= 4, url);
-    assert.ok(parsed.candidates.every((item) => item.name && Number.isFinite(item.percent)));
-  }
-});

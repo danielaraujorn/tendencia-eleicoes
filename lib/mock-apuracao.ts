@@ -34,14 +34,14 @@ type ListPerson = {
 const PRESIDENT: ChartPerson[] = [
   {
     id: "vytu-broxa",
-    number: "67",
+    number: "13",
     name: "Vytu Broxa",
     party: "VB",
     shares: [51.8, 49.6, 47.8, 46.4, 45.6],
   },
   {
     id: "breno-esquizo",
-    number: "11",
+    number: "44",
     name: "Breno Esquizo",
     party: "BE",
     shares: [34.2, 36.8, 39.1, 41.0, 42.4],
@@ -273,14 +273,14 @@ const SECOND_SP_PST = [6, 14, 22, 31, 39] as const;
 const SECOND_PRESIDENT: ChartPerson[] = [
   {
     id: "vytu-broxa",
-    number: "67",
+    number: "13",
     name: "Vytu Broxa",
     party: "VB",
     shares: [52, 51, 50.2, 49.4, 48.7],
   },
   {
     id: "breno-esquizo",
-    number: "11",
+    number: "44",
     name: "Breno Esquizo",
     party: "BE",
     shares: [48, 49, 49.8, 50.6, 51.3],

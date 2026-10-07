@@ -38,7 +38,9 @@ export function chartRows(view: RaceView) {
     for (const candidate of plotted) {
       const percent = point.percents[candidate.id];
       row[candidate.id] =
-        typeof percent === "number" ? clampPercent(percent) : null;
+        typeof percent === "number"
+          ? clampPercent(percent)
+          : null;
       row[`${candidate.id}__trend`] = null;
     }
     return row;
@@ -49,7 +51,9 @@ export function chartRows(view: RaceView) {
 
   const last = rows[rows.length - 1];
   for (const candidate of plotted) {
-    const trend = view.trends.find((item) => item.id === candidate.id);
+    const trend = view.trends.find(
+      (item) => item.id === candidate.id,
+    );
     if (!trend) continue;
     last[`${trend.id}__trend`] = last[trend.id] ?? null;
   }
@@ -57,9 +61,13 @@ export function chartRows(view: RaceView) {
   const end: Record<string, number | null> = { pst: 100 };
   for (const candidate of plotted) {
     end[candidate.id] = null;
-    const projected = view.trends.find((trend) => trend.id === candidate.id)?.projected;
+    const projected = view.trends.find(
+      (trend) => trend.id === candidate.id,
+    )?.projected;
     end[`${candidate.id}__trend`] =
-      typeof projected === "number" ? clampPercent(projected) : null;
+      typeof projected === "number"
+        ? clampPercent(projected)
+        : null;
   }
   rows.push(end);
   return rows;
@@ -99,7 +107,9 @@ function useNarrowScreen() {
   );
 }
 
-export function yDomain(rows: Record<string, number | null>[]) {
+export function yDomain(
+  rows: Record<string, number | null>[],
+) {
   const values = rows.flatMap((row) =>
     Object.entries(row)
       .filter(
@@ -109,8 +119,8 @@ export function yDomain(rows: Record<string, number | null>[]) {
       .map(([, value]) => value as number),
   );
   if (values.length === 0) return [0, 1];
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+  const min = Math.min(...values, 50);
+  const max = Math.max(...values, 50);
   const span = Math.max(max - min, 1);
   return [
     Math.max(0, min - span * 0.15),

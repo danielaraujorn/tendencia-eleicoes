@@ -1,7 +1,7 @@
-import { REGIONS } from "./labels";
+import { REGIONS, presidentStateId } from "./labels";
 import { tseBase } from "./races";
 import { parseTseNumber } from "./tse";
-import type { Candidate, RegionView } from "./types";
+import type { Candidate, RaceView, RegionView } from "./types";
 
 export { REGIONS };
 
@@ -71,6 +71,102 @@ export function decodeRegions(candidates: Candidate[]): RegionView[] {
       label: candidate.name,
       pst: candidate.percent < 0 ? null : candidate.percent,
     }));
+}
+
+export type RegionShare = {
+  id: string;
+  number: string;
+  name: string;
+  percent: number;
+};
+
+export type RegionBallot = {
+  id: string;
+  label: string;
+  pst: number | null;
+  shares: RegionShare[];
+  lagging: boolean;
+};
+
+function countedVotes(view: RaceView | undefined) {
+  if (!view?.available || view.zeroed) return [];
+  return view.top.filter(
+    (candidate) =>
+      candidate.number &&
+      candidate.destination !== "regiao" &&
+      (!candidate.destination || candidate.destination === "Válido") &&
+      Number.isFinite(candidate.votes),
+  );
+}
+
+export function regionBallots(
+  regions: RegionView[],
+  races: Record<string, RaceView> | undefined,
+  national: RaceView | null | undefined,
+): { rows: RegionBallot[]; note: string | null } {
+  const pair =
+    national?.available && !national.zeroed
+      ? national.top.slice(0, 2).filter((candidate) => candidate.number)
+      : [];
+  const leader = pair[0];
+  const runner = pair[1];
+  const nationalPst = national?.available && !national.zeroed ? national.pst : null;
+
+  const counted = REGIONS.map((region) => {
+    const found = regions.find((item) => item.id === region.id);
+    const votes = new Map<string, number>();
+    let total = 0;
+    if (leader && runner && races) {
+      for (const state of region.states) {
+        for (const candidate of countedVotes(races[presidentStateId(state)])) {
+          votes.set(candidate.number, (votes.get(candidate.number) ?? 0) + candidate.votes);
+          total += candidate.votes;
+        }
+      }
+    }
+    const shares =
+      leader && runner && total > 0
+        ? pair.map((candidate) => ({
+            id: candidate.id,
+            number: candidate.number,
+            name: candidate.name,
+            percent: ((votes.get(candidate.number) ?? 0) / total) * 100,
+          }))
+        : [];
+    const leaderVotes = leader ? (votes.get(leader.number) ?? 0) : 0;
+    const runnerVotes = runner ? (votes.get(runner.number) ?? 0) : 0;
+    return {
+      id: region.id,
+      label: region.label,
+      pst: found?.pst ?? null,
+      shares,
+      runnerAhead: total > 0 && runnerVotes > leaderVotes,
+    };
+  });
+
+  const lagging = counted
+    .filter(
+      (row) =>
+        row.runnerAhead &&
+        row.pst != null &&
+        nationalPst != null &&
+        row.pst < nationalPst - 1e-9,
+    )
+    .sort((a, b) => (a.pst ?? 0) - (b.pst ?? 0) || a.label.localeCompare(b.label, "pt-BR"))[0];
+
+  return {
+    rows: counted.map((row) => ({
+      id: row.id,
+      label: row.label,
+      pst: row.pst,
+      shares: row.shares,
+      lagging: lagging?.id === row.id,
+    })),
+    note:
+      lagging && runner
+        ? `O ${lagging.label} está atrás na apuração e puxa para ${runner.name}.`
+        : null,
+  };
 }
 
 export type RegionFetch =

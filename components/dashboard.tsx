@@ -337,7 +337,11 @@ export function Dashboard({
           {error ? ` · ${error}` : ""}
         </p>
         </div>
-        <RegionsPanel regions={data?.rounds[roundKey]?.regions ?? []} />
+        <RegionsPanel
+          regions={data?.rounds[roundKey]?.regions ?? []}
+          races={roundRaces}
+          national={nationalView}
+        />
       </header>
 
       <div className="races">

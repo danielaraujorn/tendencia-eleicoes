@@ -1,22 +1,22 @@
+import { colorFor } from "@/lib/colors";
 import { formatPercent } from "@/lib/format";
-import { REGIONS } from "@/lib/labels";
-import type { RegionView } from "@/lib/types";
+import { regionBallots } from "@/lib/regions";
+import type { RaceView, RegionView } from "@/lib/types";
 
 export function RegionsPanel({
   regions,
+  races,
+  national,
 }: {
   regions: RegionView[];
+  races?: Record<string, RaceView>;
+  national?: RaceView | null;
 }) {
-  const rows = REGIONS.map((region) => {
-    const found = regions.find(
-      (item) => item.id === region.id,
-    );
-    return {
-      id: region.id,
-      label: region.label,
-      pst: found?.pst ?? null,
-    };
-  });
+  const ballot = regionBallots(regions, races, national);
+  const ids =
+    national?.top
+      .slice(0, 2)
+      .map((candidate) => candidate.id) ?? [];
 
   return (
     <aside
@@ -25,14 +25,34 @@ export function RegionsPanel({
     >
       <p className="kicker">Apuração por região</p>
       <ul>
-        {rows.map((region) => (
+        {ballot.rows.map((region) => (
           <li key={region.id}>
-            <span>{region.label}</span>
-            <span>
-              {region.pst == null
-                ? "—"
-                : formatPercent(region.pst)}
-            </span>
+            <div className="region-line">
+              <span>{region.label}</span>
+              <span>
+                {region.pst == null
+                  ? "—"
+                  : formatPercent(region.pst)}
+              </span>
+            </div>
+            {region.shares.length > 0 ? (
+              <p className="region-shares">
+                {region.shares.map((share) => (
+                  <span key={share.id} title={share.name}>
+                    <i
+                      style={{
+                        background: colorFor(
+                          share.id,
+                          ids,
+                          share.number,
+                        ),
+                      }}
+                    />
+                    {formatPercent(share.percent)}
+                  </span>
+                ))}
+              </p>
+            ) : null}
           </li>
         ))}
       </ul>

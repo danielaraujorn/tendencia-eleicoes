@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CandidateName } from "@/components/candidate-name";
 import { colorFor } from "@/lib/colors";
 import { formatPercent, formatVotes } from "@/lib/format";
+import { raceReading } from "@/lib/reading";
 import type { RaceView } from "@/lib/types";
 import { chartRows, RaceChart } from "./race-chart";
 
@@ -37,6 +38,7 @@ export function RacePanel({
     ? pool.slice(0, expanded ? LIST_EXPANDED : LIST_PREVIEW)
     : pool;
   const ids = pool.map((candidate) => candidate.id);
+  const reading = view && countable ? raceReading(view) : null;
 
   return (
     <section className="panel">
@@ -66,6 +68,7 @@ export function RacePanel({
         ) : (
           <h2>{view?.scope ?? "—"}</h2>
         )}
+        {reading ? <p className="reading">{reading}</p> : null}
       </header>
 
       {!view?.available ? (
