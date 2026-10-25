@@ -14,7 +14,7 @@ import {
   regionRaceKey,
 } from "@/lib/regions";
 import { seatsForList } from "@/lib/seats";
-import { getRaceCursor, loadSeries, recordSnapshot } from "@/lib/store";
+import { getRaceCursor, loadSeries, recordSnapshot, recordSync } from "@/lib/store";
 import { fetchRace } from "@/lib/tse";
 import { candidatesToStore, governorRunoff } from "@/lib/view";
 
@@ -154,6 +154,14 @@ export async function POST(request: Request) {
         if (secondRegions.status === "updated") revalidate();
       }
     }
+  }
+
+  const synced = results.some(
+    (result) => result.status === "updated" || result.status === "unchanged",
+  );
+  if (synced) {
+    await recordSync();
+    revalidate();
   }
 
   const errors = results.filter((result) => result.status === "error");

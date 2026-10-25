@@ -23,7 +23,6 @@ export type StoredState = StoredPoint & {
 
 const CHART_SIZE = 5;
 const CHART_LIST_SIZE = 6;
-const CHART_MIN_PST = 1;
 const CROSSOVER_MIN_PST = 20;
 const ZEROED_LIST = 10;
 
@@ -120,7 +119,7 @@ function chartPoints(history: StoredPoint[], latest: StoredState | null) {
     : [...history];
   if (latest) points.push(latest);
   points.sort((a, b) => a.pst - b.pst);
-  return points.filter((point) => point.pst >= CHART_MIN_PST - 1e-9);
+  return points.filter((point) => point.pst > 1e-9);
 }
 
 export function buildRaceView(
@@ -269,10 +268,15 @@ export function buildApuracao(
   states: StoredState[],
   history: StoredPoint[],
   source: ApuracaoResponse["source"],
+  syncedAt?: Date | null,
 ): ApuracaoResponse {
+  const synced = syncedAt?.getTime();
   return {
     source,
-    capturedAt: latestCapturedAt(states),
+    capturedAt:
+      synced !== undefined && Number.isFinite(synced)
+        ? new Date(synced).toISOString()
+        : latestCapturedAt(states),
     rounds: {
       "1": roundApuracao(rounds.first, states, history, rounds.regions?.["1"] ?? []),
       "2": roundApuracao(

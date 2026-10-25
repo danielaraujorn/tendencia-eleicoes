@@ -136,6 +136,26 @@ test("a resposta traz a captura mais recente", () => {
   assert.equal(response.capturedAt, "2026-10-04T20:20:00.000Z");
 });
 
+test("a captura exibida é a última sincronização com o TSE", () => {
+  const response = buildApuracao(
+    { first: [president] },
+    [
+      {
+        race: "presidente:21270",
+        pst: 10,
+        candidates: [],
+        finalized: false,
+        sourceUpdatedAt: "04/10/2026 17:10:00",
+        capturedAt: new Date("2026-10-04T20:10:00.000Z"),
+      },
+    ],
+    [],
+    "oficial",
+    new Date("2026-10-04T20:40:00.000Z"),
+  );
+  assert.equal(response.capturedAt, "2026-10-04T20:40:00.000Z");
+});
+
 test("guarda ponto novo a cada 0,1 e no fechamento", () => {
   assert.equal(shouldRecordHistory(null, 0, false), true);
   assert.equal(shouldRecordHistory(10, 10.05, false), false);
@@ -292,7 +312,7 @@ test("lista os cinco mais votados e plota os dois primeiros", () => {
   assert.equal(view.crossover, null);
 });
 
-test("o gráfico começa em 1% e descarta a apuração zerada", () => {
+test("o gráfico descarta a apuração zerada e mantém o que passou de 0%", () => {
   const empty = [
     candidate({ id: "0", percent: 0, votes: 0, seq: 0 }),
     candidate({ id: "1", percent: 0, votes: 0, seq: 1 }),
@@ -319,7 +339,7 @@ test("o gráfico começa em 1% e descarta a apuração zerada", () => {
 
   assert.deepEqual(
     view.points.map((point) => point.pst),
-    [1, 2],
+    [0.4, 1, 2],
   );
 });
 

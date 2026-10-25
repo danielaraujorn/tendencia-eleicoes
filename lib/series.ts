@@ -1,7 +1,7 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { decodeRegions, regionRaceKey } from "./regions";
 import { dataSource, races, resolveElectionRounds, storageKey } from "./races";
-import { loadSeries } from "./store";
+import { SYNC_RACE, loadSeries } from "./store";
 import { buildApuracao } from "./view";
 
 export async function getCachedApuracao() {
@@ -24,6 +24,7 @@ export async function getCachedApuracao() {
     ...first.map(storageKey),
     ...second.map(storageKey),
     ...regionKeys,
+    SYNC_RACE,
   ]);
   const byRace = new Map(states.map((state) => [state.race, state]));
 
@@ -38,8 +39,13 @@ export async function getCachedApuracao() {
           : [],
       },
     },
-    states.filter((state) => !state.race.startsWith("regioes:")),
-    history.filter((point) => !point.race.startsWith("regioes:")),
+    states.filter(
+      (state) => !state.race.startsWith("regioes:") && state.race !== SYNC_RACE,
+    ),
+    history.filter(
+      (point) => !point.race.startsWith("regioes:") && point.race !== SYNC_RACE,
+    ),
     dataSource(),
+    byRace.get(SYNC_RACE)?.capturedAt ?? null,
   );
 }

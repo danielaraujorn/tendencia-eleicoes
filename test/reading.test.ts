@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { yDomain } from "../components/race-chart";
+import { xDomain, yDomain } from "../components/race-chart";
 import { mockSecondApuracao } from "../lib/mock-apuracao";
 import { advantageDirection, raceReading } from "../lib/reading";
 import { regionBallots } from "../lib/regions";
@@ -59,6 +59,42 @@ test("sem tendência a frase fica no placar atual", () => {
   assert.equal(
     reading,
     "Ana tem 54,00% contra 46,00%. A vantagem é de 8,00 p.p.",
+  );
+});
+
+test("o eixo começa curto e abre até 100% com a tendência", () => {
+  assert.deepEqual(xDomain(0.25, false), [0, 1]);
+  assert.deepEqual(xDomain(0.86, false), [0, 1]);
+  assert.deepEqual(xDomain(1.1, false), [0, 2]);
+  assert.deepEqual(xDomain(4, false), [0, 5]);
+  assert.deepEqual(xDomain(5, false), [0, 100]);
+  assert.deepEqual(xDomain(6, true), [0, 100]);
+});
+
+test("todas as regiões mostram a fatia dos candidatos", () => {
+  const national = view({});
+  const para = view({
+    id: "presidente-pa",
+    top: national.top.map((candidate, index) => ({
+      ...candidate,
+      votes: index === 0 ? 70 : 30,
+    })),
+  });
+  const { rows } = regionBallots([], { "presidente-pa": para }, national);
+  const norte = rows.find((row) => row.id === "norte");
+  const sul = rows.find((row) => row.id === "sul");
+  const sudeste = rows.find((row) => row.id === "sudeste");
+
+  assert.equal(rows.length, 5);
+  assert.equal(norte?.shares[0]?.percent, 70);
+  assert.equal(norte?.shares[1]?.percent, 30);
+  assert.deepEqual(
+    sul?.shares.map((share) => share.percent),
+    [0, 0],
+  );
+  assert.deepEqual(
+    sudeste?.shares.map((share) => share.percent),
+    [0, 0],
   );
 });
 

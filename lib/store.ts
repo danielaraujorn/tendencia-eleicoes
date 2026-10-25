@@ -5,6 +5,26 @@ import { raceState, snapshots } from "./schema";
 import type { ParsedRace } from "./tse";
 import type { Candidate } from "./types";
 
+export const SYNC_RACE = "sincronizacao:tse";
+
+export async function recordSync(at = new Date()) {
+  await getDb()
+    .insert(raceState)
+    .values({
+      race: SYNC_RACE,
+      pst: 0,
+      etag: null,
+      finalized: false,
+      sourceUpdatedAt: null,
+      candidates: [],
+      capturedAt: at,
+    })
+    .onConflictDoUpdate({
+      target: raceState.race,
+      set: { capturedAt: at },
+    });
+}
+
 export async function getRaceCursor(race: string) {
   const rows = await getDb()
     .select()

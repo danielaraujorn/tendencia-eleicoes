@@ -107,6 +107,27 @@ function useNarrowScreen() {
   );
 }
 
+const X_CEILINGS = [1, 2, 5];
+const TREND_AXIS_PST = 5;
+
+export function xDomain(lastPst: number, hasTrend: boolean) {
+  if (hasTrend || lastPst >= TREND_AXIS_PST - 1e-9) return [0, 100] as const;
+  const ceiling =
+    X_CEILINGS.find((edge) => lastPst <= edge + 1e-9) ?? TREND_AXIS_PST;
+  return [0, ceiling] as const;
+}
+
+export function xTicks(right: number, narrow: boolean) {
+  if (right >= 100) {
+    return narrow
+      ? [0, 25, 50, 75, 100]
+      : [0, 20, 40, 60, 80, 100];
+  }
+  if (right <= 1) return [0, 1];
+  if (right <= 2) return [0, 1, 2];
+  return narrow ? [0, 2.5, 5] : [0, 1, 2, 3, 4, 5];
+}
+
 export function yDomain(
   rows: Record<string, number | null>[],
 ) {
@@ -157,6 +178,9 @@ export function RaceChart({
 
   if (rows.length === 0) return null;
   const domain = yDomain(rows);
+  const lastPst = view.points[view.points.length - 1]?.pst ?? 0;
+  const [xMin, xMax] = xDomain(lastPst, view.trends.length > 0);
+  const singleReading = view.points.length === 1;
 
   return (
     <div className="chart">
@@ -177,12 +201,9 @@ export function RaceChart({
           <XAxis
             dataKey="pst"
             type="number"
-            domain={[1, 100]}
-            ticks={
-              narrow
-                ? [1, 25, 50, 75, 100]
-                : [1, 20, 40, 60, 80, 100]
-            }
+            domain={[xMin, xMax]}
+            ticks={xTicks(xMax, narrow)}
+            allowDataOverflow
             tickFormatter={(value) => `${value}%`}
             stroke="#8a8175"
             tick={{
@@ -247,7 +268,7 @@ export function RaceChart({
                 candidate.number,
               )}
               strokeWidth={3.5}
-              dot={false}
+              dot={singleReading ? { r: 4 } : false}
               activeDot={false}
               connectNulls
               isAnimationActive={false}

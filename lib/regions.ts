@@ -125,12 +125,13 @@ export function regionBallots(
       }
     }
     const shares =
-      leader && runner && total > 0
+      leader && runner
         ? pair.map((candidate) => ({
             id: candidate.id,
             number: candidate.number,
             name: candidate.name,
-            percent: ((votes.get(candidate.number) ?? 0) / total) * 100,
+            percent:
+              total > 0 ? ((votes.get(candidate.number) ?? 0) / total) * 100 : 0,
           }))
         : [];
     const leaderVotes = leader ? (votes.get(leader.number) ?? 0) : 0;
